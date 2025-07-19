@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1 AI Tests</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-output {
+            background: #000;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .pass { color: #00ff00; }
+        .fail { color: #ff0000; }
+        .info { color: #ffff00; }
+        button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Phase 1 AI Module Tests</h1>
+    
+    <div>
+        <button onclick="runTests()">▶️ Run All Tests</button>
+        <button onclick="clearOutput()">🗑️ Clear Output</button>
+        <button onclick="runSpecificTest('constants')">🔧 Test Constants Only</button>
+        <button onclick="runSpecificTest('utils')">🛠️ Test Utils Only</button>
+        <button onclick="runSpecificTest('tt')">💾 Test Transposition Table Only</button>
+    </div>
+    
+    <div id="test-output" class="test-output">
+        Click "Run All Tests" to start testing...
+    </div>
+
+    <script type="module">
+        import { Phase1Tester } from './src/engine/ai/phase1-test.js';
+        
+        let tester;
+        const output = document.getElementById('test-output');
+        
+        // Override console.log to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function logToPage(message, type = 'info') {
+            const span = document.createElement('span');
+            span.className = type;
+            span.textContent = message + '\n';
+            output.appendChild(span);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        console.log = (message) => {
+            originalLog(message);
+            logToPage(message, message.includes('✅') ? 'pass' : message.includes('❌') ? 'fail' : 'info');
+        };
+        
+        console.error = (message) => {
+            originalError(message);
+            logToPage(message, 'fail');
+        };
+        
+        window.runTests = async () => {
+            output.innerHTML = '';
+            logToPage('🚀 Starting Phase 1 Module Tests...', 'info');
+            
+            try {
+                tester = new Phase1Tester();
+                tester.runAllTests();
+                
+                // Store for debugging
+                window.tester = tester;
+                
+            } catch (error) {
+                logToPage(`❌ Error running tests: ${error.message}`, 'fail');
+                console.error('Test error:', error);
+            }
+        };
+        
+        window.runSpecificTest = async (testType) => {
+            output.innerHTML = '';
+            
+            try {
+                tester = new Phase1Tester();
+                
+                switch(testType) {
+                    case 'constants':
+                        logToPage('🔧 Testing Constants Module...', 'info');
+                        tester.testConstants();
+                        break;
+                    case 'utils':
+                        logToPage('🛠️ Testing Utils Module...', 'info');
+                        tester.testUtils();
+                        break;
+                    case 'tt':
+                        logToPage('💾 Testing Transposition Table...', 'info');
+                        tester.testTranspositionTable();
+                        break;
+                }
+                
+                tester.printSummary();
+                
+            } catch (error) {
+                logToPage(`❌ Error running ${testType} test: ${error.message}`, 'fail');
+            }
+        };
+        
+        window.clearOutput = () => {
+            output.innerHTML = 'Output cleared. Click "Run All Tests" to start testing...';
+        };
+        
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                logToPage('📋 Test runner loaded. Ready to test Phase 1 modules!', 'info');
+                logToPage('💡 Tip: Check browser console for additional details.', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
