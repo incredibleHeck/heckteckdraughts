@@ -12,46 +12,35 @@
 import { PIECE, PLAYER, BOARD_SIZE } from '../constants.js';
 import { EVALUATION_CONFIG } from './ai.constants.js';
 import { generateMoves, countPieces, isEndgame } from './ai.utils.js';
+import { endgameEvaluator } from './ai.endgame.js';
 
-/**
- * Position Evaluator - The Brain's Assessment
- * PRESERVES your exact working evaluation logic
- */
 export class PositionEvaluator {
     constructor() {
         this.materialWeights = EVALUATION_CONFIG.MATERIAL;
         this.positionalWeights = EVALUATION_CONFIG.POSITIONAL;
         this.tacticalWeights = EVALUATION_CONFIG.TACTICAL;
-        
-        // Tactical analyzer (will be loaded if available)
+
         this.tacticalAnalyzer = null;
         this.useTacticalAnalysis = false;
-        
-        // Safety analyzer (will be loaded if available)
         this.safetyAnalyzer = null;
         this.useSafetyAnalysis = false;
-        
-        // Configuration
-        this.tacticalWeight = 0.2; // Start conservative at 20%
-        this.tacticalBonusLimit = 30; // Start with ±30 limit
-        this.safetyWeight = 0.15; // 15% weight for safety
-        this.safetyBonusLimit = 25; // ±25 safety adjustment
-        
+
+        // Default configuration
+        this.tacticalWeight = 0.2;
+        this.tacticalBonusLimit = 30;
+        this.safetyWeight = 0.15;
+        this.safetyBonusLimit = 25;
+
         console.log('PositionEvaluator initialized with preserved logic');
-        
-        // Try to load analyzers after a short delay
+
         setTimeout(() => {
             this.loadTacticalAnalyzer();
             this.loadSafetyAnalyzer();
         }, 100);
     }
 
-    /**
-     * Load tactical analyzer if available
-     */
     loadTacticalAnalyzer() {
         try {
-            // Try dynamic import
             import('./ai.tactics.js').then(module => {
                 if (module.tacticalAnalyzer) {
                     this.tacticalAnalyzer = module.tacticalAnalyzer;
@@ -70,12 +59,8 @@ export class PositionEvaluator {
         }
     }
 
-    /**
-     * Load safety analyzer if available
-     */
     loadSafetyAnalyzer() {
         try {
-            // Try dynamic import
             import('./ai.safety.js').then(module => {
                 if (module.safetyAnalyzer) {
                     this.safetyAnalyzer = module.safetyAnalyzer;
@@ -95,37 +80,52 @@ export class PositionEvaluator {
     }
 
     /**
-     * Main evaluation function
-     * CRITICAL: This preserves your EXACT working logic for the flipped board
+     * Adjust tactical and safety weights dynamically by game phase
      */
+    adjustWeightsForGamePhase(position) {
+        const totalPieces = countPieces(position).whiteCount + countPieces(position).blackCount;
+        if (totalPieces > 16) {
+            // Opening
+            this.tacticalWeight = 0.18;
+            this.safetyWeight = 0.10;
+        } else if (totalPieces > 10) {
+            // Middlegame
+            this.tacticalWeight = 0.25;
+            this.safetyWeight = 0.15;
+        } else {
+            // Endgame
+            this.tacticalWeight = 0.12;
+            this.safetyWeight = 0.30;
+        }
+    }
+
     evaluatePosition(position) {
+        this.adjustWeightsForGamePhase(position);
+
         let score = 0;
         let whiteMaterial = 0, blackMaterial = 0;
         let whiteCount = 0, blackCount = 0;
         let whiteKings = 0, blackKings = 0;
-        
-        // Count material and evaluate positions - EXACT LOGIC PRESERVED
+
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const piece = position.pieces[r][c];
                 if (piece === PIECE.NONE) continue;
-                
+
                 const isWhite = piece === PIECE.WHITE || piece === PIECE.WHITE_KING;
                 const isKing = piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING;
-                
+
                 if (isWhite) {
                     whiteMaterial += isKing ? this.materialWeights.KING : this.materialWeights.MAN;
                     whiteCount++;
                     if (isKing) whiteKings++;
-                    
-                    // CRITICAL: White advancement bonus (toward row 0) - PRESERVED EXACTLY
+
                     if (!isKing) {
-                        score += (9 - r) * this.positionalWeights.ADVANCEMENT_BONUS;  // Closer to top = better
-                        if (r <= 2) score += this.positionalWeights.PROMOTION_ZONE_BONUS;  // Near promotion bonus
-                        if (r === 1) score += this.positionalWeights.ABOUT_TO_PROMOTE;  // About to promote
+                        score += (9 - r) * this.positionalWeights.ADVANCEMENT_BONUS;
+                        if (r <= 2) score += this.positionalWeights.PROMOTION_ZONE_BONUS;
+                        if (r === 1) score += this.positionalWeights.ABOUT_TO_PROMOTE;
                     }
-                    
-                    // King centralization - PRESERVED EXACTLY
+
                     if (isKing) {
                         const centerDist = Math.abs(r - 4.5) + Math.abs(c - 4.5);
                         score += (this.positionalWeights.KING_CENTRALIZATION - centerDist);
@@ -134,92 +134,67 @@ export class PositionEvaluator {
                     blackMaterial += isKing ? this.materialWeights.KING : this.materialWeights.MAN;
                     blackCount++;
                     if (isKing) blackKings++;
-                    
-                    // CRITICAL: Black advancement bonus (toward row 9) - PRESERVED EXACTLY
+
                     if (!isKing) {
-                        score -= r * this.positionalWeights.ADVANCEMENT_BONUS;  // Closer to bottom = better for black
-                        if (r >= 7) score -= this.positionalWeights.PROMOTION_ZONE_BONUS;  // Near promotion bonus
-                        if (r === 8) score -= this.positionalWeights.ABOUT_TO_PROMOTE;  // About to promote
+                        score -= r * this.positionalWeights.ADVANCEMENT_BONUS;
+                        if (r >= 7) score -= this.positionalWeights.PROMOTION_ZONE_BONUS;
+                        if (r === 8) score -= this.positionalWeights.ABOUT_TO_PROMOTE;
                     }
-                    
-                    // King centralization - PRESERVED EXACTLY
+
                     if (isKing) {
                         const centerDist = Math.abs(r - 4.5) + Math.abs(c - 4.5);
                         score -= (this.positionalWeights.KING_CENTRALIZATION - centerDist);
                     }
                 }
-                
-                // Central squares bonus - PRESERVED EXACTLY
+
                 if (r >= 3 && r <= 6 && c >= 2 && c <= 7) {
                     score += isWhite ? this.positionalWeights.CENTER_BONUS : -this.positionalWeights.CENTER_BONUS;
                 }
-                
-                // Edge penalty for non-kings - PRESERVED EXACTLY
+
                 if (!isKing && (r === 0 || r === 9 || c === 0 || c === 9)) {
                     score += isWhite ? this.positionalWeights.EDGE_PENALTY : -this.positionalWeights.EDGE_PENALTY;
                 }
             }
         }
-        
-        // Terminal position detection - PRESERVED EXACTLY
+
         if (whiteCount === 0) return position.currentPlayer === PLAYER.BLACK ? 10000 : -10000;
         if (blackCount === 0) return position.currentPlayer === PLAYER.WHITE ? 10000 : -10000;
-        
-        // Material difference - PRESERVED EXACTLY
+
         score += whiteMaterial - blackMaterial;
-        
-        // Mobility bonus - PRESERVED EXACTLY
+
         const moves = generateMoves(position);
         score += (position.currentPlayer === PLAYER.WHITE ? 1 : -1) * moves.length * this.tacticalWeights.MOBILITY_BONUS;
-        
-        // Add tactical bonus if available
+
         if (this.useTacticalAnalysis && this.tacticalAnalyzer) {
             try {
                 const tacticalBonus = this.evaluateTacticalBonus(position);
                 score += tacticalBonus;
-                
-                // Log significant tactical adjustments
                 if (Math.abs(tacticalBonus) > 20) {
                     console.log(`Tactical adjustment: ${tacticalBonus > 0 ? '+' : ''}${tacticalBonus}`);
                 }
-            } catch (error) {
-                // Silently continue without tactical bonus
-            }
+            } catch (error) {}
         }
-        
-        // Add safety bonus if available
+
         if (this.useSafetyAnalysis && this.safetyAnalyzer) {
             try {
                 const safetyBonus = this.evaluateSafetyBonus(position);
                 score += safetyBonus;
-                
-                // Log significant safety adjustments
                 if (Math.abs(safetyBonus) > 15) {
                     console.log(`Safety adjustment: ${safetyBonus > 0 ? '+' : ''}${safetyBonus}`);
                 }
-            } catch (error) {
-                // Silently continue without safety bonus
-            }
+            } catch (error) {}
         }
-        
-        // Return from current player's perspective - PRESERVED EXACTLY
+
         return position.currentPlayer === PLAYER.WHITE ? score : -score;
     }
 
-    /**
-     * Evaluate tactical bonus
-     */
     evaluateTacticalBonus(position) {
         if (!this.tacticalAnalyzer) return 0;
-        
+
         try {
             const analysis = this.tacticalAnalyzer.analyzeTactics(position);
-            let bonus = 0;
-            
-            // Use the tactical score with our weight
-            bonus = analysis.score * this.tacticalWeight;
-            
-            // Add pattern bonuses if available
+            let bonus = analysis.score * this.tacticalWeight;
+
             if (analysis.details) {
                 const current = analysis.details.current;
                 if (current.forks && current.forks.length > 0) {
@@ -229,145 +204,102 @@ export class PositionEvaluator {
                     bonus -= current.hanging.length * 10;
                 }
             }
-            
-            // Limit the bonus
+
             return Math.max(-this.tacticalBonusLimit, Math.min(this.tacticalBonusLimit, bonus));
-            
         } catch (error) {
             return 0;
         }
     }
 
-    /**
-     * Evaluate safety bonus
-     */
     evaluateSafetyBonus(position) {
         if (!this.safetyAnalyzer) return 0;
-        
+
         try {
             const analysis = this.safetyAnalyzer.analyzeSafety(position);
-            let bonus = 0;
-            
-            // Use the safety score with our weight
-            bonus = analysis.score * this.safetyWeight;
-            
-            // Special considerations for forced captures
+            let bonus = analysis.score * this.safetyWeight;
+
             if (analysis.forcedCaptures && analysis.forcedCaptures.tactical_trap) {
-                // Being forced into bad captures is very bad
                 bonus -= 20;
             }
-            
-            // King vulnerability is critical
+
             if (analysis.kingVulnerability < -50) {
-                bonus -= 15; // Extra penalty for exposed king
+                bonus -= 15;
             }
-            
-            // Having many safe moves is good
+
             const totalMoves = analysis.safeMoves.length + analysis.riskyMoves.length;
             if (totalMoves > 0) {
                 const safeRatio = analysis.safeMoves.length / totalMoves;
                 if (safeRatio > 0.7) {
-                    bonus += 10; // Bonus for having mostly safe options
+                    bonus += 10;
                 } else if (safeRatio < 0.3) {
-                    bonus -= 10; // Penalty for mostly risky options
+                    bonus -= 10;
                 }
             }
-            
-            // Limit the bonus
+
             return Math.max(-this.safetyBonusLimit, Math.min(this.safetyBonusLimit, bonus));
-            
         } catch (error) {
             return 0;
         }
     }
 
-    /**
-     * Enhanced evaluation with additional factors
-     * Builds on the preserved core logic
-     */
     evaluatePositionEnhanced(position) {
-        // Start with core evaluation (preserved logic)
+        this.adjustWeightsForGamePhase(position);
+
         let score = this.evaluatePosition(position);
-        
-        // Add enhanced factors
         score += this.evaluateTactical(position);
         score += this.evaluateKingSafety(position);
         score += this.evaluatePatterns(position);
-        
-        // Endgame adjustments
+
         if (isEndgame(position)) {
-            score += this.evaluateEndgame(position);
+            score += endgameEvaluator.evaluateEndgame(position);
         }
-        
+
         return score;
     }
 
-    /**
-     * Evaluate tactical factors
-     */
     evaluateTactical(position) {
         let score = 0;
-        
-        // If tactical analyzer is available, use it
+
         if (this.useTacticalAnalysis && this.tacticalAnalyzer) {
             try {
                 const analysis = this.tacticalAnalyzer.analyzeTactics(position);
                 if (analysis.details) {
                     const current = analysis.details.current;
-                    
-                    // Penalty for hanging pieces
                     if (current.hanging) {
                         score -= current.hanging.length * 15;
                     }
-                    
-                    // Bonus for defended pieces
                     if (current.defended) {
                         score += current.defended.length * 3;
                     }
-                    
-                    // Bonus for threats
                     if (current.forks) {
                         score += current.forks.length * 20;
                     }
                 }
-                
-                return score * 0.5; // Reduce impact
-            } catch (error) {
-                // Fall back to basic evaluation
-            }
+                return score * 0.5;
+            } catch (error) {}
         }
-        
-        // Basic tactical evaluation
+
         const hangingPieces = this.countHangingPieces(position);
         score += hangingPieces * this.tacticalWeights.HANGING_PENALTY;
-        
+
         const protectedPieces = this.countProtectedPieces(position);
         score += protectedPieces * this.tacticalWeights.PROTECTED_BONUS;
-        
-        // Tempo bonus (having the move is valuable)
+
         score += this.tacticalWeights.TEMPO_BONUS;
-        
+
         return score;
     }
 
-    /**
-     * Evaluate king safety - enhanced with safety analyzer
-     */
     evaluateKingSafety(position) {
         let score = 0;
-        
-        // If safety analyzer is available, use it for better king safety evaluation
+
         if (this.useSafetyAnalysis && this.safetyAnalyzer) {
             try {
                 const analysis = this.safetyAnalyzer.analyzeSafety(position);
-                // King vulnerability is already from current player's perspective
-                return analysis.kingVulnerability * 0.5; // Reduce impact
-            } catch (error) {
-                // Fall back to basic evaluation
-            }
+                return analysis.kingVulnerability * 0.5;
+            } catch (error) {}
         }
-        
-        // Basic king safety evaluation
+
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const piece = position.pieces[r][c];
@@ -378,63 +310,49 @@ export class PositionEvaluator {
                 }
             }
         }
-        
+
         return position.currentPlayer === PLAYER.WHITE ? score : -score;
     }
 
-    /**
-     * Quick evaluation for move ordering
-     */
     quickEval(position, move) {
         const piece = position.pieces[move.from.row][move.from.col];
         const isWhite = piece === PIECE.WHITE || piece === PIECE.WHITE_KING;
-        
+
         let score = 0;
-        
-        // Forward movement bonus (CRITICAL: correct directions preserved)
+
         if (piece === PIECE.WHITE) {
-            score += (move.from.row - move.to.row) * 10;  // White moves up
+            score += (move.from.row - move.to.row) * 10;
         } else if (piece === PIECE.BLACK) {
-            score += (move.to.row - move.from.row) * 10;  // Black moves down
+            score += (move.to.row - move.from.row) * 10;
         }
-        
-        // Center control
+
         const centerDist = Math.abs(move.to.row - 4.5) + Math.abs(move.to.col - 4.5);
         score += (10 - centerDist);
-        
-        // Add tactical quick score if available
+
         if (this.useTacticalAnalysis && this.tacticalAnalyzer && this.tacticalAnalyzer.quickTacticalScore) {
             try {
                 const tacticalBonus = this.tacticalAnalyzer.quickTacticalScore(position, move);
                 score += tacticalBonus * 0.3;
-            } catch (error) {
-                // Ignore errors
-            }
+            } catch (error) {}
         }
-        
-        // Add safety quick score if available
+
         if (this.useSafetyAnalysis && this.safetyAnalyzer && this.safetyAnalyzer.quickSafetyScore) {
             try {
                 const safetyBonus = this.safetyAnalyzer.quickSafetyScore(position, move);
                 score += safetyBonus * 0.2;
-            } catch (error) {
-                // Ignore errors
-            }
+            } catch (error) {}
         }
-        
+
         return score;
     }
 
-    /**
-     * Debug evaluation - shows component scores
-     */
     debugEvaluate(position) {
         const material = this.evaluateMaterial(position);
         const positional = this.evaluatePositional(position);
         const tactical = this.evaluateTactical(position);
         const kingSafety = this.evaluateKingSafety(position);
         const total = this.evaluatePosition(position);
-        
+
         const result = {
             material,
             positional,
@@ -443,24 +361,21 @@ export class PositionEvaluator {
             total,
             breakdown: `Material: ${material}, Positional: ${positional}, Tactical: ${tactical}, King Safety: ${kingSafety}`
         };
-        
-        // Add tactical status
+
         result.tacticalStatus = {
             enabled: this.useTacticalAnalysis,
             loaded: !!this.tacticalAnalyzer,
             weight: this.tacticalWeight,
             limit: this.tacticalBonusLimit
         };
-        
-        // Add safety status
+
         result.safetyStatus = {
             enabled: this.useSafetyAnalysis,
             loaded: !!this.safetyAnalyzer,
             weight: this.safetyWeight,
             limit: this.safetyBonusLimit
         };
-        
-        // Add detailed analysis if available
+
         if (this.useTacticalAnalysis && this.tacticalAnalyzer) {
             try {
                 const tactics = this.tacticalAnalyzer.analyzeTactics(position);
@@ -469,7 +384,7 @@ export class PositionEvaluator {
                 result.tacticalDetails = { error: 'Failed to analyze' };
             }
         }
-        
+
         if (this.useSafetyAnalysis && this.safetyAnalyzer) {
             try {
                 const safety = this.safetyAnalyzer.analyzeSafety(position);
@@ -478,13 +393,10 @@ export class PositionEvaluator {
                 result.safetyDetails = { error: 'Failed to analyze' };
             }
         }
-        
+
         return result;
     }
 
-    /**
-     * Configuration methods
-     */
     setTacticalWeight(weight) {
         this.tacticalWeight = Math.max(0, Math.min(1, weight));
         console.log(`Tactical weight set to ${this.tacticalWeight}`);
@@ -531,12 +443,9 @@ export class PositionEvaluator {
         };
     }
 
-    /**
-     * All existing helper methods remain the same...
-     */
     evaluateMaterial(position) {
         let whiteMaterial = 0, blackMaterial = 0;
-        
+
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const piece = position.pieces[r][c];
@@ -556,99 +465,63 @@ export class PositionEvaluator {
                 }
             }
         }
-        
-        return position.currentPlayer === PLAYER.WHITE ? 
+
+        return position.currentPlayer === PLAYER.WHITE ?
             (whiteMaterial - blackMaterial) : (blackMaterial - whiteMaterial);
     }
 
     evaluatePositional(position) {
         let score = 0;
-        
+
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const piece = position.pieces[r][c];
                 if (piece === PIECE.NONE) continue;
-                
+
                 const isWhite = piece === PIECE.WHITE || piece === PIECE.WHITE_KING;
                 const isKing = piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING;
                 const multiplier = isWhite ? 1 : -1;
-                
-                // Central control
+
                 const centerDist = Math.abs(r - 4.5) + Math.abs(c - 4.5);
                 if (centerDist <= 2) {
                     score += multiplier * this.positionalWeights.CENTER_BONUS;
                 }
-                
-                // Back rank safety for men
+
                 if (!isKing) {
                     if ((isWhite && r >= 7) || (!isWhite && r <= 2)) {
-                        score += multiplier * 10; // Back rank safety
+                        score += multiplier * 10;
                     }
                 }
-                
-                // King activity
+
                 if (isKing) {
                     const activity = this.calculateKingActivity(position, r, c);
                     score += multiplier * activity;
                 }
             }
         }
-        
+
         return position.currentPlayer === PLAYER.WHITE ? score : -score;
     }
 
     evaluatePatterns(position) {
         let score = 0;
-        
-        // Bridge patterns (men supporting each other)
         score += this.evaluateBridgePatterns(position);
-        
-        // Triangle formations
         score += this.evaluateTriangleFormations(position);
-        
-        // Blocked positions
         score += this.evaluateBlockedPositions(position);
-        
         return score;
     }
 
-    evaluateEndgame(position) {
-        let score = 0;
-        const counts = countPieces(position);
-        
-        // King centralization is more important in endgame
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                const piece = position.pieces[r][c];
-                if (piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING) {
-                    const isWhite = piece === PIECE.WHITE_KING;
-                    const centerDist = Math.abs(r - 4.5) + Math.abs(c - 4.5);
-                    const centralization = (10 - centerDist) * 5; // Increased importance
-                    score += isWhite ? centralization : -centralization;
-                }
-            }
-        }
-        
-        // Opposition in king endgames
-        if (counts.whiteCount <= 3 && counts.blackCount <= 3) {
-            score += this.evaluateOpposition(position);
-        }
-        
-        return position.currentPlayer === PLAYER.WHITE ? score : -score;
-    }
-
     calculateKingActivity(position, row, col) {
-        // Count possible moves for the king
         let activity = 0;
         const directions = [
             { dy: -1, dx: -1 }, { dy: -1, dx: 1 },
             { dy: 1, dx: -1 }, { dy: 1, dx: 1 }
         ];
-        
+
         for (const dir of directions) {
             let nr = row + dir.dy;
             let nc = col + dir.dx;
-            
+
             while (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
                 if (position.pieces[nr][nc] === PIECE.NONE) {
                     activity++;
@@ -659,19 +532,18 @@ export class PositionEvaluator {
                 nc += dir.dx;
             }
         }
-        
+
         return activity;
     }
 
     calculateKingSafety(position, row, col, isWhite) {
-        // Count friendly pieces nearby
         let safety = 0;
-        
+
         for (let dr = -2; dr <= 2; dr++) {
             for (let dc = -2; dc <= 2; dc++) {
                 const nr = row + dr;
                 const nc = col + dc;
-                
+
                 if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
                     const piece = position.pieces[nr][nc];
                     if ((isWhite && (piece === PIECE.WHITE || piece === PIECE.WHITE_KING)) ||
@@ -681,32 +553,28 @@ export class PositionEvaluator {
                 }
             }
         }
-        
+
         return safety;
     }
 
     countHangingPieces(position) {
-        // Simplified implementation - would be better with safety analyzer
         return 0;
     }
 
     countProtectedPieces(position) {
-        // Simplified implementation - would be better with safety analyzer
         return 0;
     }
 
     evaluateBridgePatterns(position) {
-        // Look for men supporting each other diagonally
         let score = 0;
-        
+
         for (let r = 1; r < BOARD_SIZE - 1; r++) {
             for (let c = 1; c < BOARD_SIZE - 1; c++) {
                 const piece = position.pieces[r][c];
                 if (piece === PIECE.WHITE || piece === PIECE.BLACK) {
-                    // Check for diagonal support
                     const isWhite = piece === PIECE.WHITE;
                     const supportPiece = isWhite ? PIECE.WHITE : PIECE.BLACK;
-                    
+
                     if (position.pieces[r-1][c-1] === supportPiece ||
                         position.pieces[r-1][c+1] === supportPiece ||
                         position.pieces[r+1][c-1] === supportPiece ||
@@ -716,28 +584,19 @@ export class PositionEvaluator {
                 }
             }
         }
-        
+
         return position.currentPlayer === PLAYER.WHITE ? score : -score;
     }
 
     evaluateTriangleFormations(position) {
-        // Look for triangular piece formations
         let score = 0;
-        // Implementation would check for specific triangle patterns
         return score;
     }
 
     evaluateBlockedPositions(position) {
-        // Penalize blocked pieces
         let score = 0;
-        // Implementation would check for pieces with no moves
-        return score;
-    }
-
-    evaluateOpposition(position) {
-        // In king endgames, opposition is crucial
-        let score = 0;
-        // Implementation would check for king opposition patterns
         return score;
     }
 }
+
+export const positionEvaluator = new PositionEvaluator();
