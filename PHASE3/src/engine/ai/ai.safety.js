@@ -646,15 +646,19 @@ export class SafetyAnalyzer {
     quickSafetyScore(position, move) {
         let score = 0;
 
+        // Quick checks only
         const newPosition = makeMove(position, move);
 
+        // Does move leave piece hanging?
         const destSafety = this.evaluateSquareSafety(newPosition, move.to);
         score += destSafety.score * 0.5;
 
-        const hangingBefore = this.checkHangingPieces(position).length;
-        const hangingAfter = this.checkHangingPieces(newPosition).length;
+        // Does it expose other pieces?
+        const hangingBefore = Array.isArray(this.checkHangingPieces(position)) ? this.checkHangingPieces(position).length : 0;
+        const hangingAfterRaw = this.checkHangingPieces(newPosition);
+        const hangingAfter = Array.isArray(hangingAfterRaw) ? hangingAfterRaw : [];
 
-        if (hangingAfter > hangingBefore) {
+        if (hangingAfter.length > hangingBefore) {
             hangingAfter.forEach(piecePos => {
                 const value = this.getPieceValue(newPosition.pieces[piecePos.row][piecePos.col]);
                 score -= value * 0.3;
@@ -663,6 +667,7 @@ export class SafetyAnalyzer {
 
         return score;
     }
+
 
     getPieceValue(piece) {
         if (piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING) return 400;
