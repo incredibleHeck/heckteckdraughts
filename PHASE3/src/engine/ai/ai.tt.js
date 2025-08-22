@@ -1,22 +1,29 @@
 /**
  * AI Transposition Table - Caching for position evaluation
- * Extracted from the working self-contained AI
- * Enhanced with better replacement strategy and statistics
- * @author codewithheck
- * Modular Architecture Phase 1
+ * C++-style cluster logic adaptation for 10x10 draughts
+ * Enhanced with statistics, replacement strategy, and compatibility with existing game logic
+ * @author codewithheck (with GitHub Copilot adaptation)
+ * Modular Architecture Phase 1+
  */
 
 import { CACHE_CONFIG } from './ai.constants.js';
 import { generatePositionKey } from './ai.utils.js';
 
+// C++-style cluster size (number of entries per bucket)
+const Cluster_Size = 4;
+
 /**
  * Transposition Table for caching search results
- * PRESERVES EXACT LOGIC from working version with enhancements
+ * Implements clustered hash buckets as in high-performance C++ engines,
+ * but preserves API and logic from the working JavaScript version.
  */
 export class TranspositionTable {
     constructor(maxSize = CACHE_CONFIG.MAX_SIZE) {
-        this.table = new Map();
-        this.maxSize = maxSize;
+        // Table size as power of 2, for efficient masking
+        this.size = 1 << Math.floor(Math.log2(maxSize));
+        this.mask = (this.size - 1) & -Cluster_Size;
+        // Array of clusters (each is an array of up to Cluster_Size entries)
+        this.table = Array.from({ length: this.size }, () => []);
         
         // Statistics tracking
         this.hits = 0;
@@ -32,278 +39,213 @@ export class TranspositionTable {
 
     /**
      * Generate cache key for position
-     * PRESERVES EXACT LOGIC from working version
+     * You can customize this (this is a placeholder for your real hash)
      */
     generateKey(position) {
         return generatePositionKey(position);
     }
 
     /**
-     * Store position evaluation in cache
-     * Enhanced with better replacement strategy
+     * Hash a string key deterministically to an integer index
+     * Uses the same logic as C++ (bitmasking for power-of-2 table)
+     */
+    getIndex(key) {
+        // Simple deterministic hash for string keys
+        let hash = 0, str = key;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return (hash & this.mask);
+    }
+
+    /**
+     * Store position evaluation in cluster (C++ logic)
+     * Replacement prefers deeper and newer entries
      */
     store(key, depth, value, type, bestMove = null) {
-        // Check if we need cleanup
-        if (this.table.size >= this.maxSize) {
-            this.cleanup();
+        const index = this.getIndex(key);
+        let cluster = this.table[index];
+
+        // If cluster has space, add a new entry
+        if (cluster.length < Cluster_Size) {
+            cluster.push({
+                key, depth, value, type, bestMove,
+                date: Date.now(),
+                accessCount: 1
+            });
+            this.stores++;
+            return;
         }
-        
-        const entry = {
-            depth,
-            value,
-            type,
-            bestMove,
-            age: Date.now(),
-            accessCount: 1
-        };
-        
-        // Check for replacement
-        if (this.table.has(key)) {
-            const existing = this.table.get(key);
-            
-            // Only replace if new entry is deeper or newer
-            if (CACHE_CONFIG.REPLACEMENT.DEPTH_PREFERRED) {
-                if (depth < existing.depth) {
-                    this.collisions++;
-                    return; // Don't replace deeper search
-                }
+
+        // Otherwise, find the best replacement candidate in cluster
+        let bestIdx = -1, bestScore = -Infinity;
+        for (let i = 0; i < Cluster_Size; i++) {
+            let entry = cluster[i];
+            // Prefer to replace shallowest and least-used, then oldest
+            let score = -entry.depth * 100 - entry.accessCount + (Date.now() - entry.date) / 1000;
+            if (score > bestScore) {
+                bestScore = score;
+                bestIdx = i;
             }
-            
-            this.replacements++;
         }
-        
-        this.table.set(key, entry);
-        this.stores++;
+        // Only replace if new entry is deeper or same depth
+        if (depth >= cluster[bestIdx].depth) {
+            cluster[bestIdx] = {
+                key, depth, value, type, bestMove,
+                date: Date.now(),
+                accessCount: 1
+            };
+            this.replacements++;
+            this.stores++;
+        } else {
+            this.collisions++;
+        }
     }
 
     /**
-     * Lookup position in cache
-     * PRESERVES EXACT LOGIC from working version
+     * Lookup position in cache (C++ cluster logic)
+     * Returns entry if found and valid for requested depth and bounds
      */
     lookup(key, depth, alpha, beta) {
-        const entry = this.table.get(key);
-        
-        if (!entry || entry.depth < depth) {
-            this.misses++;
-            return null;
+        const index = this.getIndex(key);
+        const cluster = this.table[index];
+        for (let i = 0; i < cluster.length; i++) {
+            const entry = cluster[i];
+            if (entry.key === key && entry.depth >= depth) {
+                entry.accessCount++;
+                entry.date = Date.now();
+                this.hits++;
+                // Bound type logic (EXACT, LOWER, UPPER)
+                if (entry.type === CACHE_CONFIG.ENTRY_TYPES.EXACT) return entry;
+                if (entry.type === CACHE_CONFIG.ENTRY_TYPES.LOWER_BOUND && entry.value >= beta) return entry;
+                if (entry.type === CACHE_CONFIG.ENTRY_TYPES.UPPER_BOUND && entry.value <= alpha) return entry;
+            }
         }
-        
-        // Update access statistics
-        entry.accessCount++;
-        entry.age = Date.now();
-        
-        this.hits++;
-        
-        // Return based on bound type (EXACT LOGIC from working version)
-        if (entry.type === CACHE_CONFIG.ENTRY_TYPES.EXACT) {
-            return entry;
-        } else if (entry.type === CACHE_CONFIG.ENTRY_TYPES.LOWER_BOUND && entry.value >= beta) {
-            return entry;
-        } else if (entry.type === CACHE_CONFIG.ENTRY_TYPES.UPPER_BOUND && entry.value <= alpha) {
-            return entry;
-        }
-        
+        this.misses++;
         return null;
     }
 
     /**
-     * Get best move from cache if available
+     * Get best move from cache if available (C++ cluster logic)
      */
     getBestMove(key) {
-        const entry = this.table.get(key);
-        if (entry && entry.bestMove) {
-            entry.accessCount++;
-            return entry.bestMove;
+        const index = this.getIndex(key);
+        const cluster = this.table[index];
+        for (let entry of cluster) {
+            if (entry.key === key && entry.bestMove !== null) {
+                entry.accessCount++;
+                return entry.bestMove;
+            }
         }
         return null;
     }
 
     /**
-     * Cleanup cache when full
-     * Enhanced replacement strategy
-     */
-    cleanup() {
-        const startTime = Date.now();
-        const entries = Array.from(this.table.entries());
-        const toDelete = Math.floor(entries.length * CACHE_CONFIG.CLEANUP_PERCENT);
-        
-        // Sort by replacement priority
-        entries.sort((a, b) => {
-            const entryA = a[1];
-            const entryB = b[1];
-            
-            // Priority: age + depth + access count
-            const scoreA = this.calculateReplacementScore(entryA);
-            const scoreB = this.calculateReplacementScore(entryB);
-            
-            return scoreA - scoreB; // Lower score = higher replacement priority
-        });
-        
-        // Remove lowest priority entries
-        for (let i = 0; i < toDelete; i++) {
-            this.table.delete(entries[i][0]);
-        }
-        
-        this.lastCleanupTime = Date.now();
-        
-        console.log(`Cache cleanup: removed ${toDelete} entries in ${Date.now() - startTime}ms`);
-    }
-
-    /**
-     * Calculate replacement score for cache entry
-     * Lower score = higher replacement priority
-     */
-    calculateReplacementScore(entry) {
-        const now = Date.now();
-        const age = now - entry.age;
-        const ageScore = age * CACHE_CONFIG.REPLACEMENT.AGE_FACTOR;
-        const depthScore = entry.depth * 100; // Prefer keeping deeper searches
-        const accessScore = entry.accessCount * 10; // Prefer keeping frequently accessed
-        
-        return ageScore - depthScore - accessScore;
-    }
-
-    /**
-     * Clear entire cache
+     * Remove all entries from the table
      */
     clear() {
-        this.table.clear();
-        this.hits = 0;
-        this.misses = 0;
-        this.stores = 0;
-        this.collisions = 0;
-        this.replacements = 0;
+        for (let i = 0; i < this.size; i++) this.table[i] = [];
+        this.hits = this.misses = this.stores = this.collisions = this.replacements = 0;
         this.lastCleanupTime = Date.now();
     }
 
     /**
-     * Get comprehensive statistics
+     * Comprehensive statistics about table usage
      */
     getStats() {
         const total = this.hits + this.misses;
         const hitRate = total > 0 ? (this.hits / total * 100).toFixed(1) : 0;
+        const entries = this.table.reduce((sum, c) => sum + c.length, 0);
         const uptime = Date.now() - this.creationTime;
         const timeSinceCleanup = Date.now() - this.lastCleanupTime;
-        
         return {
-            // Basic stats
-            size: this.table.size,
-            maxSize: this.maxSize,
-            utilization: ((this.table.size / this.maxSize) * 100).toFixed(1) + '%',
-            
-            // Access stats
+            size: entries,
+            clusterCount: this.size,
+            clusterSize: Cluster_Size,
+            maxSize: this.size * Cluster_Size,
+            utilization: ((entries / (this.size * Cluster_Size)) * 100).toFixed(1) + '%',
             hits: this.hits,
             misses: this.misses,
             stores: this.stores,
             hitRate: hitRate + '%',
-            
-            // Collision stats
             collisions: this.collisions,
             replacements: this.replacements,
-            
-            // Timing stats
             uptime: Math.floor(uptime / 1000) + 's',
             timeSinceCleanup: Math.floor(timeSinceCleanup / 1000) + 's',
-            
-            // Performance metrics
             hitsPerSecond: Math.floor(this.hits / (uptime / 1000)),
             storesPerSecond: Math.floor(this.stores / (uptime / 1000))
         };
     }
 
     /**
-     * Get detailed cache analysis
+     * Detailed cache analysis (average depth, age, access, etc.)
      */
     getDetailedStats() {
         const stats = this.getStats();
-        const entries = Array.from(this.table.values());
-        
+        const entries = this.table.flat();
         if (entries.length === 0) {
             return { ...stats, analysis: 'Cache is empty' };
         }
-        
-        // Analyze cache contents
         const depths = entries.map(e => e.depth);
-        const ages = entries.map(e => Date.now() - e.age);
+        const ages = entries.map(e => Date.now() - e.date);
         const accessCounts = entries.map(e => e.accessCount);
-        
         const analysis = {
             averageDepth: (depths.reduce((a, b) => a + b, 0) / depths.length).toFixed(1),
             maxDepth: Math.max(...depths),
             minDepth: Math.min(...depths),
-            
             averageAge: Math.floor(ages.reduce((a, b) => a + b, 0) / ages.length / 1000) + 's',
             maxAge: Math.floor(Math.max(...ages) / 1000) + 's',
             minAge: Math.floor(Math.min(...ages) / 1000) + 's',
-            
             averageAccessCount: (accessCounts.reduce((a, b) => a + b, 0) / accessCounts.length).toFixed(1),
             maxAccessCount: Math.max(...accessCounts),
-            
-            // Entry type distribution
             exactEntries: entries.filter(e => e.type === CACHE_CONFIG.ENTRY_TYPES.EXACT).length,
             lowerBoundEntries: entries.filter(e => e.type === CACHE_CONFIG.ENTRY_TYPES.LOWER_BOUND).length,
             upperBoundEntries: entries.filter(e => e.type === CACHE_CONFIG.ENTRY_TYPES.UPPER_BOUND).length,
-            
-            // Best move coverage
             entriesWithBestMove: entries.filter(e => e.bestMove !== null).length
         };
-        
         return { ...stats, analysis };
     }
 
     /**
-     * Resize cache (useful for dynamic memory management)
+     * Resize the table (recreates all clusters)
      */
     resize(newSize) {
-        if (newSize < 1000) {
-            throw new Error('Cache size must be at least 1000 entries');
+        if (newSize < Cluster_Size * 2) {
+            throw new Error(`Cache size must be at least ${Cluster_Size * 2} entries`);
         }
-        
-        this.maxSize = newSize;
-        
-        // If current size exceeds new limit, cleanup immediately
-        if (this.table.size > newSize) {
-            const toDelete = this.table.size - newSize;
-            const entries = Array.from(this.table.entries());
-            
-            // Sort and remove lowest priority entries
-            entries.sort((a, b) => {
-                const scoreA = this.calculateReplacementScore(a[1]);
-                const scoreB = this.calculateReplacementScore(b[1]);
-                return scoreA - scoreB;
-            });
-            
-            for (let i = 0; i < toDelete; i++) {
-                this.table.delete(entries[i][0]);
-            }
-        }
+        this.size = 1 << Math.floor(Math.log2(newSize / Cluster_Size));
+        this.mask = (this.size - 1) & -Cluster_Size;
+        this.table = Array.from({ length: this.size }, () => []);
+        this.clear();
     }
 
     /**
-     * Probe cache for debugging
+     * Probe for a raw entry (for debugging)
      */
     probe(key) {
-        const entry = this.table.get(key);
-        return entry ? { ...entry } : null;
+        const index = this.getIndex(key);
+        const cluster = this.table[index];
+        for (let entry of cluster) {
+            if (entry.key === key) return { ...entry };
+        }
+        return null;
     }
 
     /**
-     * Get cache efficiency metrics
+     * Cache efficiency metrics and recommendations
      */
     getEfficiency() {
         const stats = this.getStats();
         const total = this.hits + this.misses;
-        
         if (total === 0) {
             return {
                 efficiency: 0,
                 recommendation: 'No searches performed yet'
             };
         }
-        
         const hitRate = this.hits / total;
         let efficiency, recommendation;
-        
         if (hitRate > 0.7) {
             efficiency = 'Excellent';
             recommendation = 'Cache is performing very well';
@@ -317,7 +259,6 @@ export class TranspositionTable {
             efficiency = 'Poor';
             recommendation = 'Cache may be too small or replacement strategy needs tuning';
         }
-        
         return {
             efficiency,
             hitRate: (hitRate * 100).toFixed(1) + '%',
@@ -328,34 +269,33 @@ export class TranspositionTable {
     }
 
     /**
-     * Export cache state for analysis
+     * Export table state for analysis (truncated for readability)
      */
     exportState() {
-        const entries = Array.from(this.table.entries()).map(([key, entry]) => ({
-            key: key.substring(0, 20) + '...', // Truncate for readability
+        const entries = this.table.flat().map((entry) => ({
+            key: entry.key.substring(0, 20) + '...',
             depth: entry.depth,
             type: entry.type,
-            age: Math.floor((Date.now() - entry.age) / 1000),
+            age: Math.floor((Date.now() - entry.date) / 1000),
             accessCount: entry.accessCount,
             hasBestMove: entry.bestMove !== null
         }));
-        
         return {
             timestamp: new Date().toISOString(),
             stats: this.getStats(),
-            entries: entries.slice(0, 100) // Limit to first 100 for readability
+            entries: entries.slice(0, 100) // Limit to 100 for display
         };
     }
 
     /**
-     * Memory usage estimation
+     * Memory usage estimation (rough)
      */
     getMemoryUsage() {
-        const entrySize = 100; // Rough estimate per entry in bytes
-        const totalMemory = this.table.size * entrySize;
-        
+        const entrySize = 100; // Estimate per entry in bytes
+        const totalEntries = this.table.reduce((sum, c) => sum + c.length, 0);
+        const totalMemory = totalEntries * entrySize;
         return {
-            entries: this.table.size,
+            entries: totalEntries,
             estimatedBytes: totalMemory,
             estimatedKB: Math.floor(totalMemory / 1024),
             estimatedMB: (totalMemory / (1024 * 1024)).toFixed(2)
