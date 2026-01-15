@@ -13,7 +13,7 @@
  * AI Evaluation Refactor - Modular Architecture
  */
 
-import { PIECE, PLAYER, BOARD_SIZE } from "../../constants.js";
+import { PIECE, PLAYER, BOARD_SIZE } from "../constants.js";
 import { EVALUATION_CONFIG } from "../ai/ai.constants.js";
 import { countPieces } from "../ai/ai.utils.js";
 import { MaterialEvaluator } from "./material-evaluator.js";

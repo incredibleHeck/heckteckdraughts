@@ -13,7 +13,7 @@
  * AI Evaluation Refactor - Modular Architecture
  */
 
-import { PIECE, PLAYER, BOARD_SIZE } from "../../constants.js";
+import { PIECE, PLAYER, BOARD_SIZE } from "../constants.js";
 import { generateMoves } from "../ai/ai.utils.js";
 
 export class PositionalEvaluator {

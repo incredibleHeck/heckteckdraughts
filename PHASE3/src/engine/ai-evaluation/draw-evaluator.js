@@ -12,7 +12,7 @@
  * AI Evaluation Refactor - Modular Architecture
  */
 
-import { PIECE, PLAYER } from "../../constants.js";
+import { PIECE, PLAYER } from "../constants.js";
 import { countPieces } from "../ai/ai.utils.js";
 
 export class DrawEvaluator {

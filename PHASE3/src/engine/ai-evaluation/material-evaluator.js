@@ -11,7 +11,7 @@
  * AI Evaluation Refactor - Modular Architecture
  */
 
-import { PIECE, PLAYER, BOARD_SIZE } from "../../constants.js";
+import { PIECE, PLAYER, BOARD_SIZE } from "../constants.js";
 
 export class MaterialEvaluator {
   constructor(materialWeights) {
