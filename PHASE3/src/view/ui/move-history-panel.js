@@ -1,164 +1,109 @@
 /**
- * Move History Panel - Displays and manages move history
- * Handles: move notation, history display, move navigation
+ * Ruthless Move History Panel
+ * - DocumentFragment rendering (Zero flicker, high speed)
+ * - Centralized notation logic (Syncs with mirrored board)
+ * - Automatic scrolling to active move
  */
+
+import { SQUARE_NUMBERS, BOARD_SIZE } from "../engine/constants.js";
 
 export class MoveHistoryPanel {
   constructor() {
     this.elements = {
       moveHistory: document.getElementById("move-history"),
-      historyContainer: document.querySelector(".history-container"),
     };
     this.listeners = new Map();
   }
 
   /**
-   * Update move history display
-   * @param {Array} history - Array of move records
-   * @param {number} currentIndex - Current position in history
+   * High-Performance History Update
+   * Uses DocumentFragment to update the list in a single browser reflow.
    */
   updateMoveHistory(history, currentIndex = -1) {
     if (!this.elements.moveHistory) return;
 
-    this.elements.moveHistory.innerHTML = "";
+    const fragment = document.createDocumentFragment();
 
+    // Group moves by pairs (1. White Black)
     for (let i = 0; i < history.length; i += 2) {
-      const moveNumber = Math.floor(i / 2) + 1;
-      const rowEl = document.createElement("div");
-      rowEl.className = "move-entry";
+      const turnNum = Math.floor(i / 2) + 1;
+      const row = document.createElement("div");
+      row.className = "move-row";
 
-      const whiteMove = history[i];
-      const blackMove = history[i + 1];
+      // 1. Turn Number
+      const numSpan = document.createElement("span");
+      numSpan.className = "turn-num";
+      numSpan.textContent = `${turnNum}.`;
+      row.appendChild(numSpan);
 
-      let whiteNotation = this.formatMoveNotation(whiteMove);
-      let blackNotation = blackMove ? this.formatMoveNotation(blackMove) : "";
+      // 2. White Move
+      row.appendChild(this._createMoveItem(history[i], i, currentIndex));
 
-      // Highlight current move
-      let whiteHTML = `<span class="move-white">${whiteNotation}</span>`;
-      let blackHTML = blackMove
-        ? `<span class="move-black">${blackNotation}</span>`
-        : "";
-
-      if (i === currentIndex) {
-        whiteHTML = `<span class="move-white active">${whiteNotation}</span>`;
-      }
-      if (i + 1 === currentIndex && blackMove) {
-        blackHTML = `<span class="move-black active">${blackNotation}</span>`;
+      // 3. Black Move
+      if (history[i + 1]) {
+        row.appendChild(
+          this._createMoveItem(history[i + 1], i + 1, currentIndex)
+        );
       }
 
-      rowEl.innerHTML = `<span class="move-number">${moveNumber}.</span> ${whiteHTML} ${blackHTML}`;
-
-      // Add click handlers for move navigation
-      const whiteMoveEl = rowEl.querySelector(".move-white");
-      const blackMoveEl = rowEl.querySelector(".move-black");
-
-      if (whiteMoveEl) {
-        whiteMoveEl.addEventListener("click", (e) => {
-          e.stopPropagation();
-          this.emit("jumpToMove", i);
-        });
-      }
-
-      if (blackMoveEl) {
-        blackMoveEl.addEventListener("click", (e) => {
-          e.stopPropagation();
-          this.emit("jumpToMove", i + 1);
-        });
-      }
-
-      this.elements.moveHistory.appendChild(rowEl);
+      fragment.appendChild(row);
     }
 
-    // Auto-scroll to end
-    if (this.elements.moveHistory.parentElement) {
-      this.elements.moveHistory.parentElement.scrollTop =
-        this.elements.moveHistory.parentElement.scrollHeight;
-    }
+    // Atomic DOM Swap
+    this.elements.moveHistory.replaceChildren(fragment);
+    this._scrollToActive();
   }
 
   /**
-   * Format a move for display
-   * @param {Object} move - Move record
-   * @returns {string} Formatted move notation
+   * Internal: Create clickable move element
    */
-  formatMoveNotation(move) {
-    if (!move) return "--";
+  _createMoveItem(move, index, currentIndex) {
+    const span = document.createElement("span");
+    span.className = `move-item ${index === currentIndex ? "active" : ""}`;
 
-    // Use existing notation if available
-    if (move.notation) {
-      return move.notation;
-    }
+    // Support for both pre-calculated notation and on-the-fly generation
+    span.textContent = move.notation || this._generateNotation(move);
 
-    // Generate notation from coordinates
-    if (move.from && move.to) {
-      const fromSquare = this.coordinatesToSquareNumber(
-        move.from.row,
-        move.from.col
-      );
-      const toSquare = this.coordinatesToSquareNumber(move.to.row, move.to.col);
+    span.onclick = (e) => {
+      e.stopPropagation();
+      this.emit("jumpToMove", index);
+    };
 
-      let notation = `${fromSquare}-${toSquare}`;
-
-      // Add indicators
-      if (move.wasCapture) notation += "x";
-      if (move.wasPromotion) notation += "=D";
-
-      return notation;
-    }
-
-    return "--";
+    return span;
   }
 
   /**
-   * Convert board coordinates to square number (1-50)
-   * @param {number} row - Row (0-9)
-   * @param {number} col - Column (0-9)
-   * @returns {number} Square number (1-50)
+   * Logic: Generate notation based on the shared SQUARE_NUMBERS map
    */
-  coordinatesToSquareNumber(row, col) {
-    // International draughts numbering (1-50 for dark squares)
-    const darkSquareNumber = row * 5 + Math.floor(col / 2) + 1;
-    return darkSquareNumber;
+  _generateNotation(move) {
+    if (!move.from || !move.to) return "--";
+
+    const fromIdx = move.from.row * BOARD_SIZE + move.from.col;
+    const toIdx = move.to.row * BOARD_SIZE + move.to.col;
+
+    const fromNum = SQUARE_NUMBERS[fromIdx];
+    const toNum = SQUARE_NUMBERS[toIdx];
+
+    const separator = move.captures && move.captures.length > 0 ? "x" : "-";
+    return `${fromNum}${separator}${toNum}`;
   }
 
-  /**
-   * Clear history display
-   */
-  clear() {
-    if (this.elements.moveHistory) {
-      this.elements.moveHistory.innerHTML = "";
+  _scrollToActive() {
+    const active = this.elements.moveHistory.querySelector(".active");
+    if (active) {
+      active.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }
 
-  /**
-   * Add event listener
-   * @param {string} event - Event name
-   * @param {Function} callback - Callback function
-   */
-  on(event, callback) {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, []);
-    }
-    this.listeners.get(event).push(callback);
+  on(event, cb) {
+    if (!this.listeners.has(event)) this.listeners.set(event, []);
+    this.listeners.get(event).push(cb);
   }
-
-  /**
-   * Emit event
-   * @param {string} event - Event name
-   * @param {*} data - Event data
-   */
   emit(event, data) {
-    if (this.listeners.has(event)) {
-      this.listeners.get(event).forEach((callback) => callback(data));
-    }
+    if (this.listeners.has(event))
+      this.listeners.get(event).forEach((cb) => cb(data));
   }
-
-  /**
-   * Get number of moves in history
-   * @returns {number} Number of moves
-   */
-  getMoveCount() {
-    if (!this.elements.moveHistory) return 0;
-    return this.elements.moveHistory.querySelectorAll(".move-entry").length * 2;
+  clear() {
+    if (this.elements.moveHistory) this.elements.moveHistory.innerHTML = "";
   }
 }

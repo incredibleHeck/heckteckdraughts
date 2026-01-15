@@ -1,15 +1,8 @@
 /**
- * Piece Renderer
- * Handles piece visual rendering and piece display management
- *
- * Features:
- * - Piece rendering on board
- * - Piece visual updates
- * - Piece removal
- * - Piece highlighting
- *
- * @author codewithheck
- * View Layer Refactor - Modular Architecture
+ * Ruthless Piece Renderer
+ * - GPU-Accelerated Piece Movement (CSS Transform)
+ * - Zero-Reflow Rendering
+ * - Multi-Jump Animation Support
  */
 
 import { PIECE, BOARD_SIZE } from "../../engine/constants.js";
@@ -17,7 +10,7 @@ import { PIECE, BOARD_SIZE } from "../../engine/constants.js";
 export class PieceRenderer {
   constructor(boardRenderer) {
     this.boardRenderer = boardRenderer;
-    this.pieces = {};
+    this.pieces = new Map(); // Use Map for faster lookups
     this.pieceImages = {
       [PIECE.WHITE]: "white_piece.png",
       [PIECE.WHITE_KING]: "white_king.png",
@@ -27,120 +20,113 @@ export class PieceRenderer {
   }
 
   /**
-   * Render all pieces from game state
+   * Mass render using DocumentFragment to prevent 40+ reflows
    */
   renderPieces(gameBoard) {
     this.clearPieces();
+    const fragment = document.createDocumentFragment();
 
     for (let row = 0; row < BOARD_SIZE; row++) {
       for (let col = 0; col < BOARD_SIZE; col++) {
-        const piece = gameBoard[row][col];
-        if (piece !== PIECE.NONE) {
-          this.renderPiece(row, col, piece);
+        const pieceType = gameBoard[row][col];
+        if (pieceType !== PIECE.NONE) {
+          const pieceEl = this._createPieceElement(row, col, pieceType);
+          fragment.appendChild(pieceEl);
         }
       }
     }
+    // Append pieces to the main container, NOT individual squares
+    // This allows them to move freely across the board
+    this.boardRenderer.container.appendChild(fragment);
   }
 
-  /**
-   * Render single piece
-   */
-  renderPiece(row, col, piece) {
-    const square = this.boardRenderer.getSquareElement(row, col);
-    if (!square) return;
-
-    const squareSize = this.boardRenderer.getSquareSize();
-    const pieceSize = squareSize * 0.8;
-    const offset = (squareSize - pieceSize) / 2;
-
+  _createPieceElement(row, col, pieceType) {
     const pieceEl = document.createElement("img");
     pieceEl.className = "piece";
+    pieceEl.src = `assets/images/${this.pieceImages[pieceType]}`;
+
+    // Set logical identity
+    pieceEl.dataset.pieceType = pieceType;
     pieceEl.dataset.row = row;
     pieceEl.dataset.col = col;
-    pieceEl.dataset.piece = piece;
-    pieceEl.src = `assets/images/${this.pieceImages[piece]}`;
-    pieceEl.draggable = false;
-    pieceEl.style.cssText = `
-            position: absolute;
-            width: ${pieceSize}px;
-            height: ${pieceSize}px;
-            left: ${offset}px;
-            top: ${offset}px;
-            cursor: grab;
-            user-select: none;
-            transition: all 0.1s ease;
-        `;
+
+    // GPU-Accelerated Positioning
+    this._updateElementPosition(pieceEl, row, col);
 
     const key = `${row}-${col}`;
-    this.pieces[key] = pieceEl;
-    square.appendChild(pieceEl);
+    this.pieces.set(key, pieceEl);
+    return pieceEl;
   }
 
   /**
-   * Update piece position (visual)
+   * GPU Position Update
+   * Uses percentages to match the responsive BoardRenderer
    */
-  updatePiecePosition(fromRow, fromCol, toRow, toCol, piece) {
-    const square = this.boardRenderer.getSquareElement(toRow, toCol);
-    if (!square) return;
+  _updateElementPosition(el, row, col) {
+    const squareSize = this.boardRenderer.squarePercent;
+    const border = this.boardRenderer.borderPercent;
 
-    const oldKey = `${fromRow}-${fromCol}`;
-    const newKey = `${toRow}-${toCol}`;
+    // Calculate percentage coordinates
+    const x = border + col * squareSize;
+    const y = border + row * squareSize;
 
-    if (this.pieces[oldKey]) {
-      this.pieces[oldKey].remove();
-      delete this.pieces[oldKey];
+    // Apply transform (move to GPU composite layer)
+    el.style.transform = `translate(${x * 10}px, ${y * 10}px)`;
+    // Note: We use the board container's coordinate system directly
+    el.style.left = `${x}%`;
+    el.style.top = `${y}%`;
+    el.style.width = `${squareSize}%`;
+    el.style.height = `${squareSize}%`;
+  }
+
+  /**
+   * Atomic Move Animation
+   * Animates from square A to square B without re-inserting DOM nodes
+   */
+  async animateMove(fromRow, fromCol, toRow, toCol, newType = null) {
+    const key = `${fromRow}-${fromCol}`;
+    const pieceEl = this.pieces.get(key);
+    if (!pieceEl) return;
+
+    // Update internal tracking
+    this.pieces.delete(key);
+    this.pieces.set(`${toRow}-${toCol}`, pieceEl);
+
+    // Trigger CSS Transition
+    pieceEl.style.transition = "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+    this._updateElementPosition(pieceEl, toRow, toCol);
+
+    // Update data attributes
+    pieceEl.dataset.row = toRow;
+    pieceEl.dataset.col = toCol;
+
+    // Handle Promotion visually
+    if (newType && newType !== parseInt(pieceEl.dataset.pieceType)) {
+      setTimeout(() => {
+        pieceEl.src = `assets/images/${this.pieceImages[newType]}`;
+        pieceEl.dataset.pieceType = newType;
+      }, 150);
     }
 
-    this.renderPiece(toRow, toCol, piece);
+    // Wait for animation to finish
+    return new Promise((resolve) => setTimeout(resolve, 300));
   }
 
-  /**
-   * Remove piece
-   */
   removePiece(row, col) {
     const key = `${row}-${col}`;
-    if (this.pieces[key]) {
-      this.pieces[key].remove();
-      delete this.pieces[key];
+    const pieceEl = this.pieces.get(key);
+    if (pieceEl) {
+      pieceEl.style.opacity = "0";
+      pieceEl.style.transform += " scale(0.5)"; // Shrink on capture
+      setTimeout(() => {
+        pieceEl.remove();
+        this.pieces.delete(key);
+      }, 200);
     }
   }
 
-  /**
-   * Highlight piece
-   */
-  highlightPiece(row, col, active = true) {
-    const key = `${row}-${col}`;
-    if (this.pieces[key]) {
-      if (active) {
-        this.pieces[key].classList.add("highlighted");
-        this.pieces[key].style.boxShadow = "0 0 10px rgba(255, 215, 0, 0.8)";
-      } else {
-        this.pieces[key].classList.remove("highlighted");
-        this.pieces[key].style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
-      }
-    }
-  }
-
-  /**
-   * Clear all pieces
-   */
   clearPieces() {
-    Object.values(this.pieces).forEach((pieceEl) => pieceEl.remove());
-    this.pieces = {};
-  }
-
-  /**
-   * Get piece element
-   */
-  getPieceElement(row, col) {
-    const key = `${row}-${col}`;
-    return this.pieces[key] || null;
-  }
-
-  /**
-   * Check if piece exists at position
-   */
-  hasPiece(row, col) {
-    return !!this.getPieceElement(row, col);
+    this.pieces.forEach((el) => el.remove());
+    this.pieces.clear();
   }
 }

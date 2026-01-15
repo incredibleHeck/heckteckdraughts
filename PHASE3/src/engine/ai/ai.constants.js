@@ -12,37 +12,37 @@ export const AI_CONFIG = {
   DIFFICULTY_LEVELS: {
     1: {
       maxDepth: 4,
-      timeLimit: 1000,
+      timeLimit: 2000,
       quiescenceDepth: 2,
       description: "Novice",
     },
     2: {
       maxDepth: 6,
-      timeLimit: 2000,
+      timeLimit: 5000,
       quiescenceDepth: 4,
       description: "Casual",
     },
     3: {
       maxDepth: 8,
-      timeLimit: 4000,
+      timeLimit: 10000,
       quiescenceDepth: 6,
       description: "Club",
     },
     4: {
       maxDepth: 12,
-      timeLimit: 10000,
+      timeLimit: 20000,
       quiescenceDepth: 8,
       description: "Master",
     },
     5: {
       maxDepth: 18,
-      timeLimit: 30000,
+      timeLimit: 40000,
       quiescenceDepth: 12,
       description: "Grandmaster",
     },
     6: {
       maxDepth: 24,
-      timeLimit: 90000,
+      timeLimit: 60000,
       quiescenceDepth: 16,
       description: "World Class",
     },

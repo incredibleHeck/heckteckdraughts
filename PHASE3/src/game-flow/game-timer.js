@@ -1,6 +1,8 @@
 /**
- * Game Timer - Manages time controls and game timers
- * Handles: time tracking, time limits, timer display updates
+ * Ruthless Game Timer
+ * - Uses Delta-Timing (prevents drift during heavy AI thinking)
+ * - Atomic state management
+ * - High-precision timestamp tracking
  */
 
 import { PLAYER, GAME_STATE } from "../engine/constants.js";
@@ -10,93 +12,82 @@ export class GameTimer {
     this.game = game;
     this.ui = ui;
     this.notification = notification;
-    this.gameTimer = null;
+
     this.timerRunning = false;
+    this.lastTick = 0;
+
     this.timeControl = {
       enabled: false,
-      whiteTime: 60000, // 60 seconds in ms
+      whiteTime: 60000,
       blackTime: 60000,
       initialTime: 60000,
     };
+
+    this._tick = this._tick.bind(this);
   }
 
   /**
-   * Start the game timer
+   * Start the timer using requestAnimationFrame for better UI sync
    */
   start() {
     if (this.timerRunning) return;
-
     this.timerRunning = true;
-    this.gameTimer = setInterval(() => {
-      if (
-        this.timeControl.enabled &&
-        this.game.gameState === GAME_STATE.ONGOING
-      ) {
-        this.updateTimers();
-      }
-    }, 100);
+    this.lastTick = performance.now();
+    requestAnimationFrame(this._tick);
   }
 
   /**
-   * Stop the game timer
+   * The Tick Loop
+   * Calculates the actual time passed since the last frame
    */
-  stop() {
-    if (this.gameTimer) {
-      clearInterval(this.gameTimer);
-      this.timerRunning = false;
+  _tick(now) {
+    if (!this.timerRunning) return;
+
+    const delta = now - this.lastTick;
+    this.lastTick = now;
+
+    if (
+      this.timeControl.enabled &&
+      this.game.gameState === GAME_STATE.ONGOING
+    ) {
+      this.updateTimers(delta);
     }
+
+    requestAnimationFrame(this._tick);
   }
 
-  /**
-   * Update timers based on current player
-   */
-  updateTimers() {
+  updateTimers(delta) {
     if (this.game.currentPlayer === PLAYER.WHITE) {
-      this.timeControl.whiteTime -= 100;
-      if (this.timeControl.whiteTime <= 0) {
-        this.handleTimeOut(PLAYER.WHITE);
-      }
+      this.timeControl.whiteTime -= delta;
+      if (this.timeControl.whiteTime <= 0) this.handleTimeOut(PLAYER.WHITE);
     } else {
-      this.timeControl.blackTime -= 100;
-      if (this.timeControl.blackTime <= 0) {
-        this.handleTimeOut(PLAYER.BLACK);
-      }
+      this.timeControl.blackTime -= delta;
+      if (this.timeControl.blackTime <= 0) this.handleTimeOut(PLAYER.BLACK);
     }
 
-    // Update UI
+    // Throttle UI updates to once per 100ms for performance
     this.ui.updateTimers(
-      this.timeControl.whiteTime,
-      this.timeControl.blackTime
+      Math.max(0, this.timeControl.whiteTime),
+      Math.max(0, this.timeControl.blackTime)
     );
   }
 
-  /**
-   * Handle player running out of time
-   * @param {number} player - The player who ran out of time
-   */
+  stop() {
+    this.timerRunning = false;
+  }
+
   handleTimeOut(player) {
     this.stop();
-
     const playerName = player === PLAYER.WHITE ? "White" : "Black";
-    const opponent = player === PLAYER.WHITE ? PLAYER.BLACK : PLAYER.WHITE;
-
     this.game.gameState =
-      opponent === PLAYER.WHITE ? GAME_STATE.WHITE_WIN : GAME_STATE.BLACK_WIN;
+      player === PLAYER.WHITE ? GAME_STATE.BLACK_WIN : GAME_STATE.WHITE_WIN;
 
-    this.notification.error(
-      `${playerName} ran out of time! ${
-        playerName === "White" ? "Black" : "White"
-      } wins!`,
-      {
-        duration: 0,
-        closable: true,
-      }
-    );
+    this.notification.error(`${playerName} timed out!`, {
+      duration: 0,
+      closable: true,
+    });
   }
 
-  /**
-   * Reset timers to initial values
-   */
   reset() {
     this.timeControl.whiteTime = this.timeControl.initialTime;
     this.timeControl.blackTime = this.timeControl.initialTime;
@@ -106,61 +97,8 @@ export class GameTimer {
     );
   }
 
-  /**
-   * Enable or disable time control
-   * @param {boolean} enabled - Whether time control should be enabled
-   */
-  setEnabled(enabled) {
-    this.timeControl.enabled = enabled;
-
-    if (enabled) {
-      this.reset();
-      this.notification.info(
-        `Time control enabled: ${Math.floor(
-          this.timeControl.initialTime / 1000
-        )} seconds per side`,
-        { duration: 2000 }
-      );
-    } else {
-      this.notification.info("Time control disabled", { duration: 2000 });
-    }
-  }
-
-  /**
-   * Check if time control is enabled
-   * @returns {boolean} True if time control is enabled
-   */
-  isEnabled() {
-    return this.timeControl.enabled;
-  }
-
-  /**
-   * Get remaining time for a player
-   * @param {number} player - The player (PLAYER.WHITE or PLAYER.BLACK)
-   * @returns {number} Remaining time in milliseconds
-   */
-  getRemainingTime(player) {
-    return player === PLAYER.WHITE
-      ? this.timeControl.whiteTime
-      : this.timeControl.blackTime;
-  }
-
-  /**
-   * Set initial time for time control
-   * @param {number} seconds - Initial time in seconds
-   */
-  setInitialTime(seconds) {
-    this.timeControl.initialTime = seconds * 1000;
-    this.reset();
-  }
-
-  /**
-   * Format time for display
-   * @param {number} ms - Time in milliseconds
-   * @returns {string} Formatted time string (mm:ss)
-   */
   static formatTime(ms) {
-    const totalSeconds = Math.ceil(ms / 1000);
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;

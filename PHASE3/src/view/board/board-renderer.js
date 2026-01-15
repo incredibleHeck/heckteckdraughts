@@ -1,15 +1,8 @@
 /**
- * Board Renderer
- * Handles board visual rendering and DOM management
- *
- * Features:
- * - Board initialization and setup
- * - Square rendering
- * - Visual styling
- * - Board dimensions and layout
- *
- * @author codewithheck
- * View Layer Refactor - Modular Architecture
+ * Ruthless Board Renderer
+ * - Aspect-Ratio Responsive Design
+ * - Targeted DOM updates (No more innerHTML on every move)
+ * - Scalable CSS-driven geometry
  */
 
 import {
@@ -21,111 +14,115 @@ import {
 export class BoardRenderer {
   constructor() {
     this.container = null;
-    this.totalBoardSize = 600;
-    this.borderSize = 14;
-    this.playingAreaSize = this.totalBoardSize - this.borderSize * 2;
-    this.squareSize = this.playingAreaSize / BOARD_SIZE;
     this.showSquareNumbers = true;
     this.editMode = false;
+
+    // Geometry percentages for high responsiveness
+    this.borderPercent = 2.3; // Approx 14px on 600px
+    this.playingAreaPercent = 100 - this.borderPercent * 2;
+    this.squarePercent = this.playingAreaPercent / BOARD_SIZE;
   }
 
-  /**
-   * Enable edit mode
-   */
-  enableEditMode() {
-    this.editMode = true;
-    this.container.classList.add("edit-mode");
-  }
-
-  /**
-   * Disable edit mode
-   */
-  disableEditMode() {
-    this.editMode = false;
-    this.container.classList.remove("edit-mode");
-  }
-
-  /**
-   * Check if in edit mode
-   */
-  isInEditMode() {
-    return this.editMode;
-  }
-
-  /**
-   * Initialize board in DOM
-   */
   initialize(containerId) {
     this.container = document.getElementById(containerId);
-    if (!this.container) {
-      throw new Error(`Board container "${containerId}" not found`);
-    }
+    if (!this.container) throw new Error(`Container ${containerId} missing`);
+
+    this.setupContainer();
     this.createBoard();
   }
 
   /**
-   * Create board visual
+   * Setup dynamic container styles
+   */
+  setupContainer() {
+    this.container.classList.add("draughts-board-wrapper");
+    // We use CSS Aspect Ratio to keep the board square regardless of width
+    Object.assign(this.container.style, {
+      position: "relative",
+      width: "100%",
+      maxWidth: "600px",
+      aspectRatio: "1 / 1",
+      margin: "0 auto",
+      backgroundImage: 'url("./assets/images/flipped_board.jpg")',
+      backgroundSize: "100% 100%",
+      userSelect: "none",
+      touchAction: "none",
+    });
+  }
+
+  /**
+   * GPU-Optimized Square Creation
    */
   createBoard() {
+    // Only clear once on init. Pieces will be handled by PieceRenderer.
     this.container.innerHTML = "";
-    this.container.style.position = "relative";
-    this.container.style.width = `${this.totalBoardSize}px`;
-    this.container.style.height = `${this.totalBoardSize}px`;
-    this.container.style.backgroundImage =
-      'url("./assets/images/flipped_board.jpg")';
-    this.container.style.backgroundSize = "cover";
-    this.container.style.backgroundPosition = "center";
+
+    const fragment = document.createDocumentFragment();
 
     for (let row = 0; row < BOARD_SIZE; row++) {
       for (let col = 0; col < BOARD_SIZE; col++) {
-        this.createSquare(row, col);
+        const square = this._createSquareElement(row, col);
+        fragment.appendChild(square);
       }
     }
+
+    this.container.appendChild(fragment);
   }
 
-  /**
-   * Create individual square
-   */
-  createSquare(row, col) {
+  _createSquareElement(row, col) {
     const square = document.createElement("div");
     square.className = "board-square";
-    square.style.position = "absolute";
-    square.style.width = `${this.squareSize}px`;
-    square.style.height = `${this.squareSize}px`;
-    square.style.left = `${this.borderSize + col * this.squareSize}px`;
-    square.style.top = `${this.borderSize + row * this.squareSize}px`;
+
+    // Layout using percentages for perfect scaling
+    Object.assign(square.style, {
+      position: "absolute",
+      width: `${this.squarePercent}%`,
+      height: `${this.squarePercent}%`,
+      left: `${this.borderPercent + col * this.squarePercent}%`,
+      top: `${this.borderPercent + row * this.squarePercent}%`,
+      cursor: "pointer",
+    });
+
     square.dataset.row = row;
     square.dataset.col = col;
-    square.style.backgroundColor = "transparent";
-    square.style.cursor = "pointer";
 
     if (isDarkSquare(row, col)) {
       square.classList.add("playable");
-
       if (this.showSquareNumbers) {
-        const number = SQUARE_NUMBERS[row * BOARD_SIZE + col];
-        const numberEl = document.createElement("div");
-        numberEl.className = "square-number";
-        numberEl.textContent = number;
-        numberEl.style.cssText = `
-                    position: absolute;
-                    bottom: 2px;
-                    right: 2px;
-                    font-size: 11px;
-                    color: rgba(255, 255, 255, 0.7);
-                    font-weight: bold;
-                    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-                `;
-        square.appendChild(numberEl);
+        this._addSquareNumber(square, row, col);
       }
     }
 
-    this.container.appendChild(square);
+    return square;
+  }
+
+  _addSquareNumber(parent, row, col) {
+    const number = SQUARE_NUMBERS[row * BOARD_SIZE + col];
+    const el = document.createElement("div");
+    el.className = "square-number";
+    el.textContent = number;
+    // Move styling to CSS file for performance, keep only logic here
+    parent.appendChild(el);
   }
 
   /**
-   * Get square element by coordinates
+   * Visual Feedback for Move Selections
    */
+  highlightSquare(row, col, type = "selected") {
+    const el = this.getSquareElement(row, col);
+    if (el) el.classList.add(`highlight-${type}`);
+  }
+
+  clearHighlights() {
+    this.container.querySelectorAll(".board-square").forEach((sq) => {
+      sq.classList.remove(
+        "highlight-selected",
+        "highlight-last-move",
+        "highlight-hint"
+      );
+    });
+  }
+
   getSquareElement(row, col) {
     return this.container.querySelector(
       `[data-row="${row}"][data-col="${col}"]`
@@ -133,53 +130,23 @@ export class BoardRenderer {
   }
 
   /**
-   * Get all squares
+   * Get dynamic pixel size for calculations (dragging/offset)
    */
-  getAllSquares() {
-    return Array.from(this.container.querySelectorAll(".board-square"));
+  getSquarePixelSize() {
+    return this.container.clientWidth * (this.squarePercent / 100);
   }
 
-  /**
-   * Get playable squares
-   */
-  getPlayableSquares() {
-    return Array.from(this.container.querySelectorAll(".playable"));
+  enableEditMode() {
+    this.editMode = true;
+    this.container.classList.add("edit-mode");
   }
 
-  /**
-   * Get square size
-   */
-  getSquareSize() {
-    return this.squareSize;
+  disableEditMode() {
+    this.editMode = false;
+    this.container.classList.remove("edit-mode");
   }
 
-  /**
-   * Get board dimensions
-   */
-  getBoardDimensions() {
-    return {
-      total: this.totalBoardSize,
-      border: this.borderSize,
-      playingArea: this.playingAreaSize,
-      squareSize: this.squareSize,
-    };
-  }
-
-  /**
-   * Set square numbers visibility
-   */
-  setShowSquareNumbers(show) {
-    this.showSquareNumbers = show;
-    const numberEls = this.container.querySelectorAll(".square-number");
-    numberEls.forEach((el) => {
-      el.style.display = show ? "block" : "none";
-    });
-  }
-
-  /**
-   * Clear board
-   */
-  clear() {
-    this.container.innerHTML = "";
+  isInEditMode() {
+    return this.editMode;
   }
 }

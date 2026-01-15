@@ -1,3 +1,10 @@
+/**
+ * Ruthless UI Orchestrator
+ * - Centralized Event Delegation
+ * - Interface Locking (Prevents state corruption)
+ * - Component Synchronization
+ */
+
 import { AnalysisPanel } from "./ui/analysis-panel.js";
 import { GameStatisticsPanel } from "./ui/game-statistics.js";
 import { MoveHistoryPanel } from "./ui/move-history-panel.js";
@@ -5,176 +12,122 @@ import { MoveHistoryPanel } from "./ui/move-history-panel.js";
 export class UI {
   constructor() {
     this.listeners = new Map();
+    this.isLocked = false;
 
-    // Initialize specialized UI panels
-    this.analysisPanel = new AnalysisPanel();
-    this.statisticsPanel = new GameStatisticsPanel();
-    this.historyPanel = new MoveHistoryPanel();
+    // Specialized Panels
+    this.analysis = new AnalysisPanel();
+    this.stats = new GameStatisticsPanel();
+    this.history = new MoveHistoryPanel();
   }
 
   initialize() {
-    this.attachEventListeners();
-  }
-
-  attachEventListeners() {
-    // Difficulty control
-    const difficultyEl = document.getElementById("difficulty-level");
-    if (difficultyEl) {
-      difficultyEl.addEventListener("change", (e) => {
-        this.emit("difficultyChange", parseInt(e.target.value, 10));
-      });
-    }
-
-    // Game mode control
-    const gameModeEl = document.getElementById("game-mode");
-    if (gameModeEl) {
-      gameModeEl.addEventListener("change", (e) => {
-        this.emit("gameModeChange", e.target.value);
-      });
-    }
-
-    // Edit mode toggle
-    const editModeEl = document.getElementById("edit-mode");
-    if (editModeEl) {
-      editModeEl.addEventListener("click", () => {
-        editModeEl.classList.toggle("active");
-        this.emit("editModeToggle", editModeEl.classList.contains("active"));
-      });
-    }
-
-    // Navigation buttons
-    const navButtons = {
-      undo: "undo",
-      redo: "redo",
-      "first-move": "firstMove",
-      "last-move": "lastMove",
-      "prev-move": "prevMove",
-      "next-move": "nextMove",
-    };
-
-    Object.entries(navButtons).forEach(([id, event]) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener("click", () => {
-          console.log(`UI button clicked: ${id}, emitting: ${event}`);
-          this.emit(event);
-        });
-      }
-    });
-
-    // FEN and export
-    const fenButtons = {
-      "import-fen": "importFEN",
-      "export-fen": "exportFEN",
-      "save-png": "savePNG",
-    };
-
-    Object.entries(fenButtons).forEach(([id, event]) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener("click", () => {
-          console.log(`UI button clicked: ${id}, emitting: ${event}`);
-          this.emit(event);
-        });
-      }
-    });
-
-    // Game rule controls
-    const maxCaptureEl = document.getElementById("max-capture-rule");
-    if (maxCaptureEl) {
-      maxCaptureEl.addEventListener("change", (e) => {
-        this.emit("maxCaptureRuleChange", e.target.checked);
-      });
-    }
-
-    const timeControlEl = document.getElementById("time-control");
-    if (timeControlEl) {
-      timeControlEl.addEventListener("change", (e) => {
-        this.emit("timeControlChange", e.target.checked);
-      });
-    }
-
-    // History panel events
-    this.historyPanel.on("jumpToMove", (index) =>
-      this.emit("jumpToMove", index)
-    );
-
-    // Edit panel internal buttons
-    const editPanelButtons = {
-      "clear-board": "clearBoard",
-      "reset-position": "resetPosition",
-      "start-game": "startGame",
-    };
-
-    Object.entries(editPanelButtons).forEach(([id, event]) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener("click", () => {
-          console.log(`UI button clicked: ${id}, emitting: ${event}`);
-          this.emit(event);
-        });
-      }
-    });
-
-    // Piece selection in edit mode
-    const pieceBtns = document.querySelectorAll(".piece-btn");
-    pieceBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const piece = parseInt(btn.dataset.piece, 10);
-        console.log("Piece btn clicked, selected piece type:", piece);
-        pieceBtns.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        this.emit("editPieceSelected", piece);
-      });
-    });
+    this._initEventListeners();
+    this._initPanelBridges();
   }
 
   /**
-   * Toggle edit panel visibility
+   * Safe Emission: Prevents user input during critical animations/AI turns
    */
-  toggleEditPanel(show) {
-    const panel = document.getElementById("edit-panel");
-    if (panel) {
-      panel.style.display = show ? "block" : "none";
+  emit(event, data) {
+    if (this.isLocked && this._isInputEvent(event)) {
+      console.warn(`UI Locked: Ignored ${event}`);
+      return;
+    }
+
+    if (this.listeners.has(event)) {
+      this.listeners.get(event).forEach((cb) => cb(data));
     }
   }
 
-  updateMoveHistory(history, currentIndex = -1) {
-    this.historyPanel.updateMoveHistory(history, currentIndex);
+  _isInputEvent(event) {
+    const inputEvents = [
+      "undo",
+      "redo",
+      "moveAttempt",
+      "jumpToMove",
+      "importFEN",
+    ];
+    return inputEvents.includes(event);
   }
 
-  updateGameStatistics(stats) {
-    this.statisticsPanel.update(stats);
+  setLocked(locked) {
+    this.isLocked = locked;
+    document.body.classList.toggle("ui-locked", locked);
   }
 
-  updateAnalysis(analysis) {
-    this.analysisPanel.updateAnalysis(analysis);
+  /**
+   * Internal bridge for sub-components
+   */
+  _initPanelBridges() {
+    this.history.on("jumpToMove", (index) => this.emit("jumpToMove", index));
   }
 
-  updateTimers(whiteTime, blackTime) {
-    this.statisticsPanel.updateTimers(whiteTime, blackTime);
+  _initEventListeners() {
+    // 1. Action Mapping (Batch Attachment)
+    const actionMap = {
+      "difficulty-level": {
+        type: "change",
+        event: "difficultyChange",
+        val: (e) => parseInt(e.target.value),
+      },
+      "game-mode": {
+        type: "change",
+        event: "gameModeChange",
+        val: (e) => e.target.value,
+      },
+      "edit-mode": {
+        type: "click",
+        event: "editModeToggle",
+        val: (e) => e.target.classList.toggle("active"),
+      },
+      undo: { type: "click", event: "undo" },
+      redo: { type: "click", event: "redo" },
+      "clear-board": { type: "click", event: "clearBoard" },
+      "reset-position": { type: "click", event: "resetPosition" },
+    };
+
+    Object.entries(actionMap).forEach(([id, config]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      el.addEventListener(config.type, (e) => {
+        const value = config.val ? config.val(e) : null;
+        this.emit(config.event || id, value);
+      });
+    });
+
+    // 2. Piece Selection (Delegate to container for better performance)
+    const palette = document.querySelector(".piece-options");
+    if (palette) {
+      palette.addEventListener("click", (e) => {
+        const btn = e.target.closest(".piece-btn");
+        if (!btn) return;
+
+        palette
+          .querySelectorAll(".piece-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        this.emit("editPieceSelected", parseInt(btn.dataset.piece));
+      });
+    }
   }
 
-  clearDisplay() {
-    this.analysisPanel.clear();
-    this.statisticsPanel.reset();
-    this.historyPanel.clear();
+  // --- External Update API ---
+  updateMoveHistory(h, idx) {
+    this.history.updateMoveHistory(h, idx);
+  }
+  updateStats(s) {
+    this.stats.update(s);
+  }
+  updateAnalysis(a) {
+    this.analysis.update(a);
+  }
+  updateTimers(w, b) {
+    this.stats.updateTimers(w, b);
   }
 
   on(event, cb) {
     if (!this.listeners.has(event)) this.listeners.set(event, []);
     this.listeners.get(event).push(cb);
-  }
-
-  emit(event, data) {
-    if (this.listeners.has(event)) {
-      this.listeners.get(event).forEach((cb) => {
-        try {
-          cb(data);
-        } catch (error) {
-          console.error(`Error in UI event handler for '${event}':`, error);
-        }
-      });
-    }
   }
 }

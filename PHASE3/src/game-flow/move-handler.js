@@ -1,6 +1,8 @@
 /**
- * Move Handler - Manages move execution flow and validation
- * Handles: move attempts, move validation, move execution
+ * Ruthless Move Handler
+ * - Transactional Move Execution
+ * - Piece Animation Support (Pre-calculating jump paths)
+ * - Atomic View Synchronization
  */
 
 import { GAME_STATE } from "../engine/constants.js";
@@ -13,146 +15,104 @@ export class MoveHandler {
     this.notification = notification;
     this.history = history;
     this.aiHandler = null;
-    this.moveExecutionTime = 0;
+    this.isProcessing = false;
   }
 
-  /**
-   * Set AI handler for turn callbacks
-   */
   setAIHandler(aiHandler) {
     this.aiHandler = aiHandler;
   }
 
   /**
-   * Handle an attempted move from the board
+   * Entry point for Human Input
    */
-  handleMoveAttempt(moveData) {
-    console.log("Move attempt received:", moveData);
-    try {
-      // Check if game is active
-      console.log("Current game state:", this.game.gameState);
-      if (this.game.gameState !== GAME_STATE.ONGOING) {
-        this.notification.warning("Game is not active", { duration: 1500 });
-        return;
-      }
+  async handleMoveAttempt(moveData) {
+    if (this.isProcessing || this.game.gameState !== GAME_STATE.ONGOING) return;
 
-      // Check for same square
-      if (
-        moveData.from.row === moveData.to.row &&
-        moveData.from.col === moveData.to.col
-      ) {
-        this.board.clearHighlights();
-        return;
-      }
-
-      // Get legal moves
-      const legalMoves = this.game.getLegalMoves();
-      console.log("Legal moves found:", legalMoves.length, legalMoves);
-
-      // Find matching legal move
-      const attemptedMove = legalMoves.find(
-        (m) =>
-          m.from.row === moveData.from.row &&
-          m.from.col === moveData.from.col &&
-          m.to.row === moveData.to.row &&
-          m.to.col === moveData.to.col
-      );
-      
-      console.log("Attempted move match:", attemptedMove);
-
-      if (!attemptedMove) {
-        this.notification.warning("Illegal move", { duration: 1500 });
-        this.board.clearHighlights();
-        // Restore pieces to correct positions
-        this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
-        return;
-      }
-
-      // Execute the move
-      console.log("Executing move...");
-      this.executeMove(attemptedMove);
-    } catch (error) {
-      console.error("Move handler error:", error);
-      this.notification.error("Failed to process move", { duration: 3000 });
+    // Zero-length move (click and release on same square)
+    if (
+      moveData.from.row === moveData.to.row &&
+      moveData.from.col === moveData.to.col
+    ) {
+      this.board.clearHighlights();
+      return;
     }
-  }
 
-  /**
-   * Execute a validated move
-   * @param {Object} move - The move to execute
-   */
-  executeMove(move) {
-    const moveStartTime = Date.now();
-
-    try {
-      if (this.game.makeMove(move, this.moveExecutionTime)) {
-        console.log("Move accepted by game engine. Updating view...");
-        
-        // Update views
-        this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
-        console.log("Board rendered.");
-        
-        this.history.recordMove(move);
-        console.log("Move recorded in history.");
-        
-        this.ui.updateMoveHistory(
-          this.history.getHistory(),
-          this.history.getCurrentIndex()
-        );
-        console.log("UI move history updated.");
-
-        // Get move notation
-        const moveNotation = this.game.getMoveNotation(move);
-        this.notification.success(`Move: ${moveNotation}`, { duration: 2500 });
-
-        // Clear highlights
-        this.board.clearHighlights();
-
-        // Notify AI handler
-        if (this.aiHandler) {
-          console.log("Notifying AI handler to check for its turn...");
-          this.aiHandler.checkIfAITurn();
-        } else {
-          console.warn("AI handler not linked to MoveHandler!");
-        }
-      } else {
-        this.notification.error("Move validation failed", { duration: 3000 });
-      }
-    } catch (error) {
-      console.error("Move execution error:", error);
-      this.notification.error("Failed to execute move", { duration: 3000 });
-    }
-  }
-
-  /**
-   * Set the thinking time for the move
-   * @param {number} time - Thinking time in milliseconds
-   */
-  setThinkingTime(time) {
-    this.moveExecutionTime = time;
-  }
-
-  /**
-   * Validate if a move is legal
-   * @param {Object} move - The move to validate
-   * @returns {boolean} True if move is legal
-   */
-  isMoveLegal(move) {
     const legalMoves = this.game.getLegalMoves();
-    return legalMoves.some(
+    const match = legalMoves.find(
       (m) =>
-        m.from.row === move.from.row &&
-        m.from.col === move.from.col &&
-        m.to.row === move.to.row &&
-        m.to.col === move.to.col
+        m.from.row === moveData.from.row &&
+        m.from.col === moveData.from.col &&
+        m.to.row === moveData.to.row &&
+        m.to.col === moveData.to.col
     );
+
+    if (!match) {
+      this.notification.warning("Illegal Move");
+      this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
+      return;
+    }
+
+    await this.executeMove(match);
   }
 
   /**
-   * Get all legal moves for current position
-   * @returns {Array} Array of legal moves
+   * Transactional Execution
+   * Handles the sequence: Board Mutation -> History -> UI -> AI Trigger
    */
-  getLegalMoves() {
-    return this.game.getLegalMoves();
+  async executeMove(move) {
+    this.isProcessing = true;
+
+    try {
+      // 1. Snapshot for History (Delta-based)
+      const capturedPieces = this._getCapturedDeltas(move);
+      const prevFlags = {
+        player: this.game.currentPlayer,
+        movesSinceAction: this.game.movesSinceAction,
+      };
+
+      // 2. Engine Mutation
+      const success = this.game.makeMove(move);
+      if (!success) throw new Error("Engine rejected move");
+
+      // 3. UI Transition
+      // We use a Promise to wait for piece animations to finish before continuing
+
+      await this.board.animateMove(move);
+
+      // 4. Record to optimized History
+      this.history.recordMove(move, capturedPieces, prevFlags);
+
+      // 5. Finalize View
+      this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
+      this.ui.updateMoveHistory(
+        this.history.getMoveList(),
+        this.history.getCurrentIndex()
+      );
+      this.notification.success(`Move: ${this.game.getMoveNotation(move)}`);
+
+      // 6. Check Turn Handover
+      if (this.game.gameState === GAME_STATE.ONGOING) {
+        if (this.aiHandler) this.aiHandler.checkIfAITurn();
+      } else {
+        this.ui.showGameOver(this.game.gameState);
+      }
+    } catch (err) {
+      console.error("Move Execution Error:", err);
+      this.notification.error("Transaction Failed");
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Helper to identify what pieces are being removed for the History Delta
+   */
+  _getCapturedDeltas(move) {
+    if (!move.captures) return [];
+    return move.captures.map((pos) => ({
+      row: pos.row,
+      col: pos.col,
+      piece: this.game.pieces[pos.row][pos.col],
+    }));
   }
 }

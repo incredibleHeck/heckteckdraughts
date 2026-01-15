@@ -1,6 +1,8 @@
 /**
- * AI Handler - Manages AI turns and interactions
- * Handles: AI move requests, AI difficulty, AI thinking state
+ * Ruthless AI Handler
+ * - Implements Atomic Locking (prevents double-moves)
+ * - State Validation (ensures AI moves for the current board only)
+ * - Integrated Notification Management
  */
 
 import { PLAYER, GAME_STATE } from "../engine/constants.js";
@@ -13,162 +15,84 @@ export class AIHandler {
     this.ui = ui;
     this.notification = notification;
     this.moveHandler = moveHandler;
+
     this.aiThinking = false;
-    this.lastAIMove = null;
-    this.mode = "pva"; // Default: Player vs AI
+    this.mode = "pva";
+    this.abortController = null;
   }
 
   /**
-   * Set game mode
-   * @param {string} mode - 'pva' or 'pvp'
-   */
-  setMode(mode) {
-    this.mode = mode;
-    console.log("AI Handler mode set to:", mode);
-  }
-
-  /**
-   * Check if it's AI's turn and trigger AI move if needed
+   * Check if it's AI's turn with State Validation
    */
   async checkIfAITurn() {
-    console.log("AI check - Mode:", this.mode, "Current Player:", this.game.currentPlayer, "Game State:", this.game.gameState, "AI Thinking:", this.aiThinking);
-    
-    // Only move if in Player vs AI mode
-    if (this.mode !== "pva") {
-      console.log("Not in AI mode (PvP).");
-      return;
-    }
+    if (this.mode !== "pva") return;
 
-    if (
-      this.game.currentPlayer === PLAYER.BLACK &&
-      this.game.gameState === GAME_STATE.ONGOING &&
-      !this.aiThinking
-    ) {
-      console.log("AI turn confirmed. Triggering AI move in 100ms...");
-      // Small delay to prevent immediate response
-      setTimeout(() => this.triggerAIMove(), 100);
-    } else {
-      console.log("Not AI turn or AI already thinking.");
+    // VALIDATION: Is it Black (AI)? Is game active? Are we already thinking?
+    const isAITurn = this.game.currentPlayer === PLAYER.BLACK;
+    const isOngoing = this.game.gameState === GAME_STATE.ONGOING;
+
+    if (isAITurn && isOngoing && !this.aiThinking) {
+      // Use a unique ID to track this specific turn's "intent"
+      const turnId = this.game.moveHistory.length;
+
+      // Artificial delay for UX
+      setTimeout(() => {
+        // Only trigger if we are still on the SAME turn after the delay
+        if (this.game.moveHistory.length === turnId) {
+          this.triggerAIMove();
+        }
+      }, 250);
     }
   }
 
   /**
-   * Trigger AI to find and make the best move
+   * Executing the Search
    */
   async triggerAIMove() {
-    console.log("triggerAIMove called. State:", {
-      thinking: this.aiThinking,
-      gameState: this.game.gameState
-    });
-    
-    if (this.aiThinking || this.game.gameState !== GAME_STATE.ONGOING) {
-      console.warn("AI already thinking or game not ongoing. Aborting trigger.");
-      return;
-    }
+    if (this.aiThinking) return;
+
+    // Snapshot the current turn to validate the result later
+    const startTurnIndex = this.game.moveHistory.length;
 
     try {
       this.aiThinking = true;
-      const notificationId = this.notification.info("AI is thinking...", {
+      this.ui.setLoading(true); // Visual indicator on board
+
+      const notificationId = this.notification.info("AI is calculating...", {
         duration: 0,
       });
-      const aiStartTime = Date.now();
 
-      // Get position for AI
-      const position = {
-        pieces: this.game.pieces,
-        currentPlayer: this.game.currentPlayer,
-      };
+      // Request move from Ruthless Engine
+      const aiMove = await this.ai.getBestMove(this.game.toPosition());
 
-      // Request move from AI
-      console.log("Requesting AI move from worker for position:", position);
-      const aiMove = await this.ai.getMove(position, this.game.moveHistory);
-      console.log("AI worker returned move:", aiMove);
-      const thinkingTime = Date.now() - aiStartTime;
-
-      // Close thinking notification
-      if (notificationId) {
+      // VALIDATION: Did the game state change while we were thinking?
+      // (e.g. User clicked "Undo" or "Reset" during the 2s search)
+      if (this.game.moveHistory.length !== startTurnIndex) {
+        console.warn("AI: Move discarded. Board state shifted during search.");
         this.notification.close(notificationId);
+        return;
       }
 
-      if (aiMove) {
-        this.lastAIMove = aiMove;
-        this.moveHandler.setThinkingTime(thinkingTime);
-        this.moveHandler.executeMove(aiMove);
+      this.notification.close(notificationId);
 
-        // Update analysis if available
-        if (this.game.statistics && this.game.statistics.searchStats) {
-          this.ui.updateAnalysis(this.game.statistics.searchStats);
-        }
-      } else {
-        this.notification.error("AI could not find a move", { duration: 3000 });
+      if (aiMove && aiMove.move) {
+        // Execute move via the moveHandler
+        // We pass the stats (nodes, depth) to the UI
+        this.moveHandler.executeMove(aiMove.move);
+        this.ui.updateAnalysis(aiMove.stats);
       }
     } catch (error) {
-      console.error("AI handler error:", error);
-      this.notification.error("AI encountered an error", { duration: 3000 });
+      console.error("AI Fatal Error:", error);
+      this.notification.error("AI Brain Failure");
     } finally {
       this.aiThinking = false;
+      this.ui.setLoading(false);
     }
   }
 
-  /**
-   * Set AI difficulty level
-   * @param {number} level - Difficulty level (1-6)
-   */
-  async setDifficulty(level) {
-    try {
-      await this.ai.setDifficulty(level);
-    } catch (error) {
-      console.error("Failed to set AI difficulty:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Abort any ongoing AI search
-   */
   abortSearch() {
-    if (this.ai && typeof this.ai.abortSearch === "function") {
-      this.ai.abortSearch();
-    }
+    this.ai.abortSearch();
     this.aiThinking = false;
-  }
-
-  /**
-   * Initialize AI engine
-   */
-  async initialize() {
-    try {
-      await this.ai.initialize();
-    } catch (error) {
-      console.error("Failed to initialize AI:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get AI analysis of current position
-   * @returns {Object} Analysis data (evaluation, best move, etc.)
-   */
-  getAnalysis() {
-    if (this.game.statistics && this.game.statistics.searchStats) {
-      return this.game.statistics.searchStats;
-    }
-    return null;
-  }
-
-  /**
-   * Check if AI is currently thinking
-   * @returns {boolean} True if AI is thinking
-   */
-  isThinking() {
-    return this.aiThinking;
-  }
-
-  /**
-   * Get the last move made by AI
-   * @returns {Object} The last AI move
-   */
-  getLastAIMove() {
-    return this.lastAIMove;
+    this.ui.setLoading(false);
   }
 }

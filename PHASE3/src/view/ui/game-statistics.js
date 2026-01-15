@@ -1,6 +1,8 @@
 /**
- * Game Statistics Panel - Displays game statistics and information
- * Handles: move count, captures, promotions, game duration, captured pieces
+ * Ruthless Game Statistics Panel
+ * - Visual "Graveyard" (Show captured piece icons)
+ * - Material Advantage delta (e.g., +200)
+ * - Dynamic Time Formatting
  */
 
 export class GameStatisticsPanel {
@@ -12,159 +14,101 @@ export class GameStatisticsPanel {
       duration: document.getElementById("game-duration"),
       whiteTimer: document.getElementById("white-timer"),
       blackTimer: document.getElementById("black-timer"),
-      whiteCaptured: document.getElementById("white-captured"),
-      blackCaptured: document.getElementById("black-captured"),
+      // Containers for visual piece icons
+      whiteGraveyard: document.getElementById("white-graveyard"),
+      blackGraveyard: document.getElementById("black-graveyard"),
+      materialAdvantage: document.getElementById("material-delta"),
       gameState: document.getElementById("game-state"),
     };
     this.gameStartTime = Date.now();
   }
 
   /**
-   * Update all game statistics
-   * @param {Object} stats - Game statistics object
+   * Atomic Stats Update
    */
   update(stats) {
-    this.updateMoveCount(stats);
-    this.updateCaptures(stats);
-    this.updatePromotions(stats);
+    this._setText(this.elements.moveCount, `Moves: ${stats.totalMoves || 0}`);
+
+    const totalCaps =
+      (stats.captures?.WHITE || 0) + (stats.captures?.BLACK || 0);
+    this._setText(this.elements.captureCount, `Captures: ${totalCaps}`);
+
+    const totalPromos =
+      (stats.promotions?.WHITE || 0) + (stats.promotions?.BLACK || 0);
+    this._setText(this.elements.promotionCount, `Promos: ${totalPromos}`);
+
     this.updateDuration();
-    this.updateCapturedPieces(stats);
+    this._renderGraveyards(stats);
+    this._updateMaterialAdvantage(stats);
   }
 
   /**
-   * Update move counter
-   * @param {Object} stats - Statistics object
+   * Renders small piece icons instead of just text
    */
-  updateMoveCount(stats) {
-    if (this.elements.moveCount && stats.totalMoves !== undefined) {
-      this.elements.moveCount.textContent = `Moves: ${stats.totalMoves}`;
-    }
+  _renderGraveyards(stats) {
+    // If stats contains arrays of captured piece types: [1, 1, 3]
+    this._fillGraveyard(
+      this.elements.whiteGraveyard,
+      stats.capturedByBlack || []
+    );
+    this._fillGraveyard(
+      this.elements.blackGraveyard,
+      stats.capturedByWhite || []
+    );
+  }
+
+  _fillGraveyard(container, pieces) {
+    if (!container) return;
+    container.innerHTML = "";
+
+    pieces.forEach((pieceType) => {
+      const icon = document.createElement("div");
+      // CSS handles the look based on the class
+      icon.className = `captured-mini-piece p-${pieceType}`;
+      container.appendChild(icon);
+    });
   }
 
   /**
-   * Update capture counter
-   * @param {Object} stats - Statistics object
+   * Displays who is leading in material (e.g., White +2)
    */
-  updateCaptures(stats) {
-    if (this.elements.captureCount && stats.captures) {
-      const total = stats.captures.WHITE + stats.captures.BLACK;
-      this.elements.captureCount.textContent = `Captures: ${total}`;
-    }
+  _updateMaterialAdvantage(stats) {
+    if (!this.elements.materialAdvantage) return;
+
+    // Standard material: Man=100, King=300+
+    const whiteScore =
+      stats.materialCount?.WHITE_MEN * 100 +
+      stats.materialCount?.WHITE_KINGS * 350;
+    const blackScore =
+      stats.materialCount?.BLACK_MEN * 100 +
+      stats.materialCount?.BLACK_KINGS * 350;
+
+    const delta = whiteScore - blackScore;
+    const sign = delta > 0 ? "+" : "";
+
+    this.elements.materialAdvantage.textContent =
+      delta === 0 ? "Even" : `${sign}${delta / 100}`;
+    this.elements.materialAdvantage.className =
+      delta > 0 ? "winning-white" : delta < 0 ? "winning-black" : "";
   }
 
-  /**
-   * Update promotion counter
-   * @param {Object} stats - Statistics object
-   */
-  updatePromotions(stats) {
-    if (this.elements.promotionCount && stats.promotions) {
-      const total = stats.promotions.WHITE + stats.promotions.BLACK;
-      this.elements.promotionCount.textContent = `Promotions: ${total}`;
-    }
-  }
-
-  /**
-   * Update game duration
-   */
   updateDuration() {
     if (this.elements.duration) {
       const elapsed = Math.floor((Date.now() - this.gameStartTime) / 1000);
-      const minutes = Math.floor(elapsed / 60);
-      const seconds = elapsed % 60;
-      this.elements.duration.textContent = `Time: ${minutes}:${seconds
-        .toString()
-        .padStart(2, "0")}`;
+      this.elements.duration.textContent = `Time: ${this.formatTime(
+        elapsed * 1000
+      )}`;
     }
   }
 
-  /**
-   * Update captured pieces display
-   * @param {Object} stats - Statistics object
-   */
-  updateCapturedPieces(stats) {
-    if (stats.capturedPieces) {
-      if (this.elements.whiteCaptured && stats.capturedPieces.WHITE) {
-        this.elements.whiteCaptured.textContent = this.formatCapturedPieces(
-          stats.capturedPieces.WHITE
-        );
-      }
-      if (this.elements.blackCaptured && stats.capturedPieces.BLACK) {
-        this.elements.blackCaptured.textContent = this.formatCapturedPieces(
-          stats.capturedPieces.BLACK
-        );
-      }
-    }
-  }
-
-  /**
-   * Format captured pieces for display
-   * @param {Array} pieces - Array of captured pieces
-   * @returns {string} Formatted string
-   */
-  formatCapturedPieces(pieces) {
-    if (!pieces || pieces.length === 0) return "—";
-
-    let count = 0;
-    pieces.forEach((piece) => {
-      // Count material value
-      count += 100; // Base piece value
-    });
-
-    return `${pieces.length}p (${count}pts)`;
-  }
-
-  /**
-   * Update timer displays
-   * @param {number} whiteTime - White's remaining time in ms
-   * @param {number} blackTime - Black's remaining time in ms
-   */
-  updateTimers(whiteTime, blackTime) {
-    if (this.elements.whiteTimer) {
-      this.elements.whiteTimer.textContent = this.formatTime(whiteTime);
-    }
-    if (this.elements.blackTimer) {
-      this.elements.blackTimer.textContent = this.formatTime(blackTime);
-    }
-  }
-
-  /**
-   * Format time for display
-   * @param {number} ms - Time in milliseconds
-   * @returns {string} Formatted time (mm:ss)
-   */
   formatTime(ms) {
-    const totalSeconds = Math.ceil(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   }
 
-  /**
-   * Update game state display
-   * @param {string} state - The game state message
-   */
-  updateGameState(state) {
-    if (this.elements.gameState) {
-      this.elements.gameState.textContent = state;
-    }
-  }
-
-  /**
-   * Reset statistics
-   */
-  reset() {
-    this.gameStartTime = Date.now();
-    if (this.elements.moveCount)
-      this.elements.moveCount.textContent = "Moves: 0";
-    if (this.elements.captureCount)
-      this.elements.captureCount.textContent = "Captures: 0";
-    if (this.elements.promotionCount)
-      this.elements.promotionCount.textContent = "Promotions: 0";
-    if (this.elements.duration)
-      this.elements.duration.textContent = "Time: 0:00";
-    if (this.elements.whiteCaptured)
-      this.elements.whiteCaptured.textContent = "—";
-    if (this.elements.blackCaptured)
-      this.elements.blackCaptured.textContent = "—";
+  _setText(el, txt) {
+    if (el) el.textContent = txt;
   }
 }

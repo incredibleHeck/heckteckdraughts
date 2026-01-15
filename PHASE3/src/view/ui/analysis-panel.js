@@ -1,121 +1,100 @@
 /**
- * Analysis Panel - Displays board analysis information
- * Handles: evaluation score, best move, search depth, threats
+ * Ruthless Analysis Panel
+ * - Integrated Evaluation Gauge (Vertical/Horizontal bar)
+ * - Real-time Search Statistics (NPS, Nodes)
+ * - Adaptive Scoring (Mate detection)
  */
 
 export class AnalysisPanel {
   constructor() {
     this.elements = {
       evaluation: document.getElementById("evaluation-score"),
+      gauge: document.getElementById("evaluation-gauge-fill"),
       bestMove: document.getElementById("best-move"),
       searchDepth: document.getElementById("search-depth"),
-      analysis: document.getElementById("analysis-panel"),
+      nodes: document.getElementById("search-nodes"),
+      nps: document.getElementById("search-nps"),
+      container: document.getElementById("analysis-panel"),
     };
   }
 
   /**
-   * Update analysis display with new evaluation
-   * @param {Object} analysis - Analysis data
+   * Update the UI with full engine statistics
+   * @param {Object} data - { score, bestMove, depth, nodes, nps, time }
    */
-  updateAnalysis(analysis) {
-    if (!analysis) return;
+  update(data) {
+    if (!data) return;
 
-    // Update evaluation score
-    if (this.elements.evaluation && analysis.score !== undefined) {
-      const scoreText = this.formatScore(analysis.score);
-      this.elements.evaluation.textContent = `Eval: ${scoreText}`;
-      this.updateScoreColor(analysis.score);
+    // 1. Update Numeric Score & Gauge
+    if (data.score !== undefined) {
+      const formatted = this.formatScore(data.score);
+      this._setText(this.elements.evaluation, formatted);
+      this._updateGauge(data.score);
     }
 
-    // Update best move
-    if (this.elements.bestMove && analysis.bestMove) {
-      this.elements.bestMove.textContent = `Best: ${analysis.bestMove}`;
+    // 2. Update Best Move (Notation)
+    if (data.bestMove) {
+      this._setText(this.elements.bestMove, `Best: ${data.bestMove}`);
     }
 
-    // Update search depth
-    if (this.elements.searchDepth && analysis.depth !== undefined) {
-      this.elements.searchDepth.textContent = `Depth: ${analysis.depth}`;
-    }
-
-    // Update threat information if available
-    if (analysis.threats) {
-      this.updateThreats(analysis.threats);
-    }
+    // 3. Update Performance Stats
+    this._setText(this.elements.searchDepth, `Depth: ${data.depth || 0}`);
+    this._setText(
+      this.elements.nodes,
+      `Nodes: ${this._formatLargeNumber(data.nodes || 0)}`
+    );
+    this._setText(
+      this.elements.nps,
+      `NPS: ${this._formatLargeNumber(data.nps || 0)}`
+    );
   }
 
   /**
-   * Format evaluation score for display
-   * @param {number} score - The evaluation score
-   * @returns {string} Formatted score
+   * Formats centipawns into standard decimal or Mate notation
    */
   formatScore(score) {
-    if (Math.abs(score) > 100000) {
-      return score > 0 ? "+∞" : "-∞"; // Checkmate
+    // Mate detection (Ruthless Engine uses high values for mate)
+    if (Math.abs(score) > 20000) {
+      const movesToMate = Math.max(1, Math.ceil((30000 - Math.abs(score)) / 2));
+      return `M${movesToMate}`;
     }
-    return (score / 100).toFixed(1);
+    const val = (score / 100).toFixed(1);
+    return score > 0 ? `+${val}` : val;
   }
 
   /**
-   * Update score display color based on evaluation
-   * @param {number} score - The evaluation score
+   * Updates the visual Evaluation Bar
+   * 0% = Black wins, 100% = White wins, 50% = Equal
    */
-  updateScoreColor(score) {
-    if (!this.elements.evaluation) return;
+  _updateGauge(score) {
+    if (!this.elements.gauge) return;
 
-    if (score > 200) {
-      this.elements.evaluation.style.color = "#2ecc71"; // Green (winning)
-    } else if (score < -200) {
-      this.elements.evaluation.style.color = "#e74c3c"; // Red (losing)
-    } else {
-      this.elements.evaluation.style.color = "#f39c12"; // Orange (balanced)
-    }
+    // Clamp score between -5 and +5 for visual representation
+    const clamped = Math.max(-500, Math.min(500, score));
+    const percentage = 50 + clamped / 10; // Map -500..500 to 0..100
+
+    this.elements.gauge.style.height = `${percentage}%`;
+
+    // Optional: Dynamic color based on who is winning
+    const color =
+      score > 100 ? "#2ecc71" : score < -100 ? "#e74c3c" : "#bdc3c7";
+    this.elements.gauge.style.backgroundColor = color;
   }
 
-  /**
-   * Update threats display
-   * @param {Array} threats - Array of threats
-   */
-  updateThreats(threats) {
-    if (!this.elements.analysis) return;
-
-    const threatsEl = this.elements.analysis.querySelector(".threats");
-    if (!threatsEl) return;
-
-    if (threats.length === 0) {
-      threatsEl.textContent = "✓ No threats";
-      threatsEl.style.color = "#2ecc71";
-    } else {
-      threatsEl.textContent = `⚠️ ${threats.length} threat(s)`;
-      threatsEl.style.color = "#e74c3c";
-    }
+  _setText(el, text) {
+    if (el) el.textContent = text;
   }
 
-  /**
-   * Clear analysis display
-   */
+  _formatLargeNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "k";
+    return num.toString();
+  }
+
   clear() {
-    if (this.elements.evaluation)
-      this.elements.evaluation.textContent = "Eval: 0.0";
-    if (this.elements.bestMove) this.elements.bestMove.textContent = "Best: -";
-    if (this.elements.searchDepth)
-      this.elements.searchDepth.textContent = "Depth: 0";
-  }
-
-  /**
-   * Show analysis panel
-   */
-  show() {
-    if (this.elements.analysis) {
-      this.elements.analysis.style.display = "block";
-    }
-  }
-
-  /**
-   * Hide analysis panel
-   */
-  hide() {
-    if (this.elements.analysis) {
-      this.elements.analysis.style.display = "none";
-    }
+    this._setText(this.elements.evaluation, "0.0");
+    this._setText(this.elements.bestMove, "-");
+    this._setText(this.elements.searchDepth, "Depth: 0");
+    if (this.elements.gauge) this.elements.gauge.style.height = "50%";
   }
 }

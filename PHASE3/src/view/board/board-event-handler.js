@@ -1,16 +1,8 @@
 /**
- * Board Event Handler
- * Handles mouse/touch events on board and piece interactions
- *
- * Features:
- * - Click detection
- * - Drag and drop
- * - Piece selection
- * - Square selection
- * - Custom event emission
- *
- * @author codewithheck
- * View Layer Refactor - Modular Architecture
+ * Ruthless Board Event Handler
+ * - GPU-Accelerated Dragging (CSS Transforms)
+ * - Atomic Event Delegation
+ * - High-Precision Hit Detection
  */
 
 export class BoardEventHandler {
@@ -20,244 +12,133 @@ export class BoardEventHandler {
     this.listeners = new Map();
     this.selectedSquare = null;
     this.draggedPiece = null;
-    this.dragOffset = { x: 0, y: 0 };
+
+    this._onMouseMove = this.handleMouseMove.bind(this);
+    this._onMouseUp = this.handleMouseUp.bind(this);
   }
 
-  /**
-   * Attach event listeners to board
-   */
   attachEventListeners() {
     const container = this.boardRenderer.container;
 
-    container.addEventListener("click", (e) => this.handleClick(e));
+    // Use a single click handler for everything (Performance)
     container.addEventListener("mousedown", (e) => this.handleMouseDown(e));
-    container.addEventListener("mousemove", (e) => this.handleMouseMove(e));
-    container.addEventListener("mouseup", (e) => this.handleMouseUp(e));
-    container.addEventListener("mouseleave", (e) => this.handleMouseLeave(e));
-    
-    // Prevent context menu during edit mode to allow right-click placement
-    container.addEventListener("contextmenu", (e) => {
-      if (this.boardRenderer.isInEditMode()) {
-        e.preventDefault();
-        // Trigger click logic for right-click as well
-        this.handleClick(e);
-      }
-    });
+
+    // Prevent default right-click menu across the board
+    container.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
   /**
-   * Handle click on board
+   * GPU-Optimized MouseDown
    */
-  handleClick(event) {
+  handleMouseDown(event) {
     const square = event.target.closest("[data-row][data-col]");
     if (!square) return;
 
     const row = parseInt(square.dataset.row);
     const col = parseInt(square.dataset.col);
 
-    // If in edit mode, emit edit event with button info and return
+    // 1. Edit Mode Shortcut
     if (this.boardRenderer.isInEditMode()) {
       this.emit("editSquare", { row, col, button: event.button });
       return;
     }
 
-    // Check if piece was clicked (target could be the piece itself or its container)
-    const piece = square.querySelector(".piece") || (event.target.classList.contains("piece") ? event.target : null);
-    
-    if (this.selectedSquare) {
-      // If clicking the same square, deselect
-      if (this.selectedSquare.row === row && this.selectedSquare.col === col) {
-        this.clearSelection();
-        return;
-      }
-
-      // If clicking another piece, change selection
-      if (piece) {
-        this.selectedSquare = { row, col };
-        this.emit("pieceSelected", { row, col });
-        this.emit("squareSelected", { row, col });
-        return;
-      }
-
-      // If clicking an empty square, attempt move
-      const from = this.selectedSquare;
-      this.clearSelection();
-      
-      console.log("Emitting click-based moveAttempt from", from.row, from.col, "to", row, col);
-      this.emit("moveAttempt", {
-        from: from,
-        to: { row, col },
-      });
+    // 2. Drag Logic
+    const piece = square.querySelector(".piece");
+    if (piece && event.button === 0) {
+      // Only left-click drag
+      this._startDrag(piece, row, col, event);
     } else {
-      // No selection, select piece if clicked
-      if (piece) {
-        this.selectedSquare = { row, col };
-        this.emit("pieceSelected", { row, col });
-        this.emit("squareSelected", { row, col });
-      } else {
-        this.emit("squareSelected", { row, col });
-      }
+      this._handleSelection(row, col);
     }
   }
 
-  /**
-   * Clear current selection
-   */
-  clearSelection() {
-    this.selectedSquare = null;
-    this.emit("selectionCleared");
-  }
-
-  /**
-   * Handle mouse down on board
-   */
-  handleMouseDown(event) {
-    if (this.boardRenderer.isInEditMode()) return;
-
-    const piece = event.target.closest(".piece");
-    if (!piece) return;
-
-    console.log("Drag started on piece:", piece.dataset.row, piece.dataset.col);
-    event.preventDefault();
-
-    const row = parseInt(piece.dataset.row);
-    const col = parseInt(piece.dataset.col);
-
+  _startDrag(element, row, col, event) {
     this.draggedPiece = {
-      element: piece,
-      row,
-      col,
-      originalX: piece.style.left,
-      originalY: piece.style.top,
+      element,
+      startRow: row,
+      startCol: col,
+      rect: this.boardRenderer.container.getBoundingClientRect(),
     };
 
-    piece.style.opacity = "0.7";
-    piece.style.cursor = "grabbing";
-    piece.style.zIndex = "1000";
-    piece.style.pointerEvents = "none"; // Critical for elementFromPoint
-    piece.style.transition = "none"; // Disable transition during drag
+    // Style piece for dragging (Move to GPU layer)
+    element.style.transition = "none";
+    element.style.zIndex = "1000";
+    element.style.cursor = "grabbing";
+    element.classList.add("dragging");
 
-    this.emit("dragStarted", { row, col });
+    window.addEventListener("mousemove", this._onMouseMove);
+    window.addEventListener("mouseup", this._onMouseUp);
   }
 
   /**
-   * Handle mouse move on board
+   * GPU-Optimized Move (Zero Reflow)
    */
   handleMouseMove(event) {
     if (!this.draggedPiece) return;
 
-    const container = this.boardRenderer.container;
-    const rect = container.getBoundingClientRect();
+    const { rect, element } = this.draggedPiece;
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
-    // Center piece on cursor
-    const pieceSize = parseFloat(this.draggedPiece.element.style.width);
-    this.draggedPiece.element.style.left = `${x - pieceSize / 2}px`;
-    this.draggedPiece.element.style.top = `${y - pieceSize / 2}px`;
+    // Center piece on mouse using translate() - No layout reflow!
+    const cellSize = rect.width / 10;
+    const translateX = x - cellSize / 2;
+    const translateY = y - cellSize / 2;
 
-    this.emit("dragging", { x, y });
+    element.style.transform = `translate(${translateX}px, ${translateY}px)`;
   }
 
-  /**
-   * Handle mouse up on board
-   */
   handleMouseUp(event) {
     if (!this.draggedPiece) return;
 
-    console.log("Mouse up detected at:", event.clientX, event.clientY);
+    const { element, startRow, startCol, rect } = this.draggedPiece;
 
-    // Reset piece style
-    this.draggedPiece.element.style.opacity = "1";
-    this.draggedPiece.element.style.cursor = "grab";
-    this.draggedPiece.element.style.zIndex = "";
-    this.draggedPiece.element.style.pointerEvents = "auto";
+    // Calculate final square based on coordinates (Faster than elementFromPoint)
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const toCol = Math.floor((x / rect.width) * 10);
+    const toRow = Math.floor((y / rect.height) * 10);
 
-    // Find the square under the mouse
-    const elementUnder = document.elementFromPoint(event.clientX, event.clientY);
-    console.log("Element under mouse:", elementUnder);
-    
-    const square = elementUnder ? elementUnder.closest("[data-row][data-col]") : null;
-    let toRow, toCol;
+    // Clean up
+    window.removeEventListener("mousemove", this._onMouseMove);
+    window.removeEventListener("mouseup", this._onMouseUp);
 
-    if (square) {
-      toRow = parseInt(square.dataset.row);
-      toCol = parseInt(square.dataset.col);
-      console.log("Target square found:", toRow, toCol);
+    element.classList.remove("dragging");
+    element.style.zIndex = "";
+    element.style.transform = ""; // Reset for re-rendering
+
+    this.draggedPiece = null;
+
+    // Validate drop
+    if (toRow >= 0 && toRow < 10 && toCol >= 0 && toCol < 10) {
+      if (startRow !== toRow || startCol !== toCol) {
+        this.emit("moveAttempt", {
+          from: { row: startRow, col: startCol },
+          to: { row: toRow, col: toCol },
+        });
+      }
+    }
+  }
+
+  _handleSelection(row, col) {
+    if (this.selectedSquare) {
+      const from = this.selectedSquare;
+      this.selectedSquare = null;
+      this.emit("moveAttempt", { from, to: { row, col } });
     } else {
-      console.log("No target square found, restoring position.");
-      // Restore original position if dropped outside board
-      this.draggedPiece.element.style.left = this.draggedPiece.originalX;
-      this.draggedPiece.element.style.top = this.draggedPiece.originalY;
-      this.draggedPiece = null;
-      return;
-    }
-
-    const { row, col } = this.draggedPiece;
-    this.draggedPiece = null;
-
-    console.log("Emitting moveAttempt from", row, col, "to", toRow, toCol);
-    this.emit("moveAttempt", {
-      from: { row, col },
-      to: { row: toRow, col: toCol },
-    });
-  }
-
-  /**
-   * Handle mouse out of board
-   */
-  handleMouseLeave(event) {
-    if (!this.draggedPiece) return;
-
-    console.log("Mouse left board, cancelling drag.");
-    // Restore position if mouse left board area
-    this.draggedPiece.element.style.left = this.draggedPiece.originalX;
-    this.draggedPiece.element.style.top = this.draggedPiece.originalY;
-    this.draggedPiece.element.style.opacity = "1";
-    this.draggedPiece.element.style.cursor = "grab";
-    this.draggedPiece.element.style.zIndex = "";
-    this.draggedPiece.element.style.pointerEvents = "auto";
-    this.draggedPiece = null;
-  }
-
-  /**
-   * Register event listener
-   */
-  on(eventName, callback) {
-    if (!this.listeners.has(eventName)) {
-      this.listeners.set(eventName, []);
-    }
-    this.listeners.get(eventName).push(callback);
-  }
-
-  /**
-   * Remove event listener
-   */
-  off(eventName, callback) {
-    if (!this.listeners.has(eventName)) return;
-
-    const callbacks = this.listeners.get(eventName);
-    const index = callbacks.indexOf(callback);
-    if (index > -1) {
-      callbacks.splice(index, 1);
+      this.selectedSquare = { row, col };
+      this.emit("pieceSelected", { row, col });
     }
   }
 
-  /**
-   * Emit event
-   */
   emit(eventName, data) {
     if (!this.listeners.has(eventName)) return;
-
-    this.listeners.get(eventName).forEach((callback) => {
-      callback(data);
-    });
+    this.listeners.get(eventName).forEach((cb) => cb(data));
   }
 
-  /**
-   * Clear all listeners
-   */
-  clearListeners() {
-    this.listeners.clear();
+  on(eventName, callback) {
+    if (!this.listeners.has(eventName)) this.listeners.set(eventName, []);
+    this.listeners.get(eventName).push(callback);
   }
 }

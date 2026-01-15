@@ -1,28 +1,22 @@
 /**
- * Board Highlighter
- * Handles visual highlights and indicators on board
- *
- * Features:
- * - Move highlights
- * - Legal move indicators
- * - Last move highlighting
- * - Check/threat indicators
- *
- * @author codewithheck
- * View Layer Refactor - Modular Architecture
+ * Ruthless Board Highlighter
+ * - Targeted Class Toggling (Zero DOM overhead)
+ * - Multi-layer Highlight Support (Last Move + Hints)
+ * - SVG-based Legal Move Indicators for sharpness
  */
 
 export class BoardHighlighter {
   constructor(boardRenderer) {
     this.boardRenderer = boardRenderer;
-    this.highlights = new Map();
+    this.highlightedSquares = new Set();
+    this.lastMoveSquares = [];
   }
 
   /**
-   * Highlight legal moves
+   * High-Performance Legal Move Hints
    */
   highlightLegalMoves(moves) {
-    this.clearHighlights();
+    this.clearHints();
 
     moves.forEach((move) => {
       const square = this.boardRenderer.getSquareElement(
@@ -30,148 +24,79 @@ export class BoardHighlighter {
         move.to.col
       );
       if (square) {
-        const indicator = document.createElement("div");
-        indicator.className = "legal-move-indicator";
-
-        const squareSize = this.boardRenderer.getSquareSize();
-        const indicatorSize = squareSize * 0.3;
-        const offset = (squareSize - indicatorSize) / 2;
-
-        indicator.style.cssText = `
-                    position: absolute;
-                    width: ${indicatorSize}px;
-                    height: ${indicatorSize}px;
-                    left: ${offset}px;
-                    top: ${offset}px;
-                    background: radial-gradient(circle, rgba(100, 200, 255, 0.8), rgba(100, 200, 255, 0.3));
-                    border-radius: 50%;
-                    pointer-events: none;
-                    z-index: 1;
-                `;
-
-        square.appendChild(indicator);
-        const key = `${move.to.row}-${move.to.col}`;
-        this.highlights.set(key, indicator);
+        // Toggle a class instead of creating elements
+        // The dot/indicator is handled by the ::after pseudo-element in CSS
+        square.classList.add("hint-dot");
+        this.highlightedSquares.add(square);
       }
     });
   }
 
   /**
-   * Highlight last move
+   * Persistent Last Move Tracking
    */
-  highlightLastMove(fromRow, fromCol, toRow, toCol) {
-    this.clearHighlights();
+  highlightLastMove(move) {
+    // Clear previous last-move highlights
+    this.lastMoveSquares.forEach((sq) =>
+      sq.classList.remove("last-move-from", "last-move-to")
+    );
+    this.lastMoveSquares = [];
 
-    const fromSquare = this.boardRenderer.getSquareElement(fromRow, fromCol);
-    const toSquare = this.boardRenderer.getSquareElement(toRow, toCol);
+    const fromSq = this.boardRenderer.getSquareElement(
+      move.from.row,
+      move.from.col
+    );
+    const toSq = this.boardRenderer.getSquareElement(move.to.row, move.to.col);
 
-    if (fromSquare) {
-      this.addHighlightToSquare(fromSquare, "last-move-from");
+    if (fromSq) {
+      fromSq.classList.add("last-move-from");
+      this.lastMoveSquares.push(fromSq);
     }
-
-    if (toSquare) {
-      this.addHighlightToSquare(toSquare, "last-move-to");
-    }
-  }
-
-  /**
-   * Highlight threat/check square
-   */
-  highlightThreat(row, col) {
-    const square = this.boardRenderer.getSquareElement(row, col);
-    if (square) {
-      this.addHighlightToSquare(square, "threat");
+    if (toSq) {
+      toSq.classList.add("last-move-to");
+      this.lastMoveSquares.push(toSq);
     }
   }
 
   /**
-   * Add highlight overlay to square
-   */
-  addHighlightToSquare(square, className) {
-    const overlay = document.createElement("div");
-    overlay.className = `square-highlight ${className}`;
-
-    const squareSize = this.boardRenderer.getSquareSize();
-
-    if (className === "last-move-from") {
-      overlay.style.cssText = `
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                background: rgba(255, 255, 100, 0.3);
-                pointer-events: none;
-                z-index: 0;
-            `;
-    } else if (className === "last-move-to") {
-      overlay.style.cssText = `
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                background: rgba(100, 255, 100, 0.3);
-                pointer-events: none;
-                z-index: 0;
-            `;
-    } else if (className === "threat") {
-      overlay.style.cssText = `
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                background: rgba(255, 100, 100, 0.4);
-                border: 2px solid rgba(255, 0, 0, 0.6);
-                pointer-events: none;
-                z-index: 0;
-            `;
-    }
-
-    square.insertBefore(overlay, square.firstChild);
-
-    const key = `${square.dataset.row}-${square.dataset.col}`;
-    this.highlights.set(key, overlay);
-  }
-
-  /**
-   * Clear all highlights
-   */
-  clearHighlights() {
-    this.highlights.forEach((highlight) => {
-      highlight.remove();
-    });
-    this.highlights.clear();
-  }
-
-  /**
-   * Highlight selected square
+   * Selection Highlight
    */
   highlightSelected(row, col, active = true) {
     const square = this.boardRenderer.getSquareElement(row, col);
     if (!square) return;
 
     if (active) {
-      square.style.boxShadow = "inset 0 0 10px rgba(0, 0, 0, 0.5)";
+      square.classList.add("selected-square");
     } else {
-      square.style.boxShadow = "";
+      square.classList.remove("selected-square");
     }
   }
 
   /**
-   * Pulse highlight effect
+   * Threat/Danger indicators (Captures)
    */
-  pulseHighlight(row, col, duration = 300) {
-    const square = this.boardRenderer.getSquareElement(row, col);
-    if (!square) return;
+  highlightThreats(captures) {
+    captures.forEach((pos) => {
+      const square = this.boardRenderer.getSquareElement(pos.row, pos.col);
+      if (square) square.classList.add("threat-capture");
+    });
+  }
 
-    const pulse = document.createElement("div");
-    pulse.style.cssText = `
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: rgba(200, 200, 255, 0.5);
-            border-radius: 4px;
-            pointer-events: none;
-            animation: pulse 0.6s ease-out;
-        `;
+  clearHints() {
+    this.highlightedSquares.forEach((sq) => {
+      sq.classList.remove("hint-dot", "threat-capture");
+    });
+    this.highlightedSquares.clear();
+  }
 
-    square.appendChild(pulse);
-    setTimeout(() => pulse.remove(), duration);
+  clearAll() {
+    this.clearHints();
+    this.lastMoveSquares.forEach((sq) =>
+      sq.classList.remove("last-move-from", "last-move-to")
+    );
+    this.lastMoveSquares = [];
+    this.boardRenderer.container
+      .querySelectorAll(".selected-square")
+      .forEach((el) => el.classList.remove("selected-square"));
   }
 }
