@@ -1,0 +1,8 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^cd c:\\\\heckteckdraughts\\\\PHASE3 ; node -e \"console\\.log\\('Testing basic structure\\.\\.\\.'\\)\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}
