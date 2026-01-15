@@ -15,9 +15,9 @@
  */
 
 // Import modular components
-import { WorkerInitializer } from "../ai-worker/worker-initializer.js";
-import { DifficultyManager } from "../ai-worker/worker-difficulty.js";
-import { MessageHandler } from "../ai-worker/worker-message-handler.js";
+import { WorkerInitializer } from "/src/engine/ai-worker/worker-initializer.js";
+import { DifficultyManager } from "/src/engine/ai-worker/worker-difficulty.js";
+import { MessageHandler } from "/src/engine/ai-worker/worker-message-handler.js";
 
 // Fallback constants for embedded operations
 const BOARD_SIZE = 10;

@@ -48,26 +48,13 @@ export class DrawDetector {
 
   /**
    * Check draw by insufficient material
-   * Only kings remaining on board
+   * Neither side can win (e.g. 1 vs 1)
    */
   static isDrawByInsufficientMaterial(game) {
-    let hasWhitePiece = false;
-    let hasBlackPiece = false;
+    const { whiteCount, blackCount } = this.countPieces(game);
 
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        const piece = game.getPiece(r, c);
-
-        if (piece === PIECE.WHITE || piece === PIECE.WHITE_KING) {
-          hasWhitePiece = true;
-        } else if (piece === PIECE.BLACK || piece === PIECE.BLACK_KING) {
-          hasBlackPiece = true;
-        }
-      }
-    }
-
-    // Only kings left = insufficient material
-    return hasWhitePiece && hasBlackPiece;
+    // Only draw if both sides have only 1 piece left (International Draughts rule variant)
+    return whiteCount === 1 && blackCount === 1;
   }
 
   /**

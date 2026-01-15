@@ -24,7 +24,7 @@ export class AIController {
         this.initPromise = new Promise((resolve, reject) => {
             try {
                 // Create the worker
-                this.worker = new Worker('src/engine/ai.worker.js', { type: 'module' });
+                this.worker = new Worker('./src/engine/ai.worker.js', { type: 'module' });
                 
                 // Set up message handler
                 this.worker.onmessage = (event) => {

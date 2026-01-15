@@ -19,10 +19,10 @@ export class PieceRenderer {
     this.boardRenderer = boardRenderer;
     this.pieces = {};
     this.pieceImages = {
-      [PIECE.WHITE]: "white-man.png",
-      [PIECE.WHITE_KING]: "white-king.png",
-      [PIECE.BLACK]: "black-man.png",
-      [PIECE.BLACK_KING]: "black-king.png",
+      [PIECE.WHITE]: "white_piece.png",
+      [PIECE.WHITE_KING]: "white_king.png",
+      [PIECE.BLACK]: "black_piece.png",
+      [PIECE.BLACK_KING]: "black_king.png",
     };
   }
 
@@ -53,50 +53,23 @@ export class PieceRenderer {
     const pieceSize = squareSize * 0.8;
     const offset = (squareSize - pieceSize) / 2;
 
-    const pieceEl = document.createElement("div");
+    const pieceEl = document.createElement("img");
     pieceEl.className = "piece";
     pieceEl.dataset.row = row;
     pieceEl.dataset.col = col;
     pieceEl.dataset.piece = piece;
+    pieceEl.src = `assets/images/${this.pieceImages[piece]}`;
+    pieceEl.draggable = false;
     pieceEl.style.cssText = `
             position: absolute;
             width: ${pieceSize}px;
             height: ${pieceSize}px;
             left: ${offset}px;
             top: ${offset}px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #fff, transparent);
             cursor: grab;
             user-select: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             transition: all 0.1s ease;
         `;
-
-    // Set piece colors
-    if (piece === PIECE.WHITE || piece === PIECE.WHITE_KING) {
-      pieceEl.style.backgroundColor = "#f5e6d3";
-      pieceEl.style.border = "2px solid #c9b899";
-    } else {
-      pieceEl.style.backgroundColor = "#3d2f1f";
-      pieceEl.style.border = "2px solid #1a1410";
-    }
-
-    // Add king crown indicator
-    if (piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING) {
-      pieceEl.classList.add("king");
-      const crown = document.createElement("div");
-      crown.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: ${pieceSize * 0.6}px;
-                color: gold;
-                font-weight: bold;
-            `;
-      crown.textContent = "♛";
-      pieceEl.appendChild(crown);
-    }
 
     const key = `${row}-${col}`;
     this.pieces[key] = pieceEl;

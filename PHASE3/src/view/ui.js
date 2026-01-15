@@ -25,6 +25,14 @@ export class UI {
       });
     }
 
+    // Game mode control
+    const gameModeEl = document.getElementById("game-mode");
+    if (gameModeEl) {
+      gameModeEl.addEventListener("change", (e) => {
+        this.emit("gameModeChange", e.target.value);
+      });
+    }
+
     // Edit mode toggle
     const editModeEl = document.getElementById("edit-mode");
     if (editModeEl) {

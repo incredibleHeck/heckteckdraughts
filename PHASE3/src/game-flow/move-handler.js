@@ -12,16 +12,25 @@ export class MoveHandler {
     this.ui = ui;
     this.notification = notification;
     this.history = history;
+    this.aiHandler = null;
     this.moveExecutionTime = 0;
   }
 
   /**
+   * Set AI handler for turn callbacks
+   */
+  setAIHandler(aiHandler) {
+    this.aiHandler = aiHandler;
+  }
+
+  /**
    * Handle an attempted move from the board
-   * @param {Object} moveData - Contains from and to squares
    */
   handleMoveAttempt(moveData) {
+    console.log("Move attempt received:", moveData);
     try {
       // Check if game is active
+      console.log("Current game state:", this.game.gameState);
       if (this.game.gameState !== GAME_STATE.ONGOING) {
         this.notification.warning("Game is not active", { duration: 1500 });
         return;
@@ -32,13 +41,13 @@ export class MoveHandler {
         moveData.from.row === moveData.to.row &&
         moveData.from.col === moveData.to.col
       ) {
-        this.board.clearSelection();
         this.board.clearHighlights();
         return;
       }
 
       // Get legal moves
       const legalMoves = this.game.getLegalMoves();
+      console.log("Legal moves found:", legalMoves.length, legalMoves);
 
       // Find matching legal move
       const attemptedMove = legalMoves.find(
@@ -48,14 +57,17 @@ export class MoveHandler {
           m.to.row === moveData.to.row &&
           m.to.col === moveData.to.col
       );
+      
+      console.log("Attempted move match:", attemptedMove);
 
       if (!attemptedMove) {
         this.notification.warning("Illegal move", { duration: 1500 });
-        this.board.highlightIllegalMove(moveData);
+        this.board.clearHighlights();
         return;
       }
 
       // Execute the move
+      console.log("Executing move...");
       this.executeMove(attemptedMove);
     } catch (error) {
       console.error("Move handler error:", error);
@@ -72,13 +84,20 @@ export class MoveHandler {
 
     try {
       if (this.game.makeMove(move, this.moveExecutionTime)) {
+        console.log("Move accepted by game engine. Updating view...");
+        
         // Update views
-        this.board.updateBoard(this.game.pieces, this.game.currentPlayer);
+        this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
+        console.log("Board rendered.");
+        
         this.history.recordMove(move);
+        console.log("Move recorded in history.");
+        
         this.ui.updateMoveHistory(
           this.history.getHistory(),
           this.history.getCurrentIndex()
         );
+        console.log("UI move history updated.");
 
         // Get move notation
         const moveNotation = this.game.getMoveNotation(move);
@@ -86,7 +105,14 @@ export class MoveHandler {
 
         // Clear highlights
         this.board.clearHighlights();
-        this.board.clearSelection();
+
+        // Notify AI handler
+        if (this.aiHandler) {
+          console.log("Notifying AI handler to check for its turn...");
+          this.aiHandler.checkIfAITurn();
+        } else {
+          console.warn("AI handler not linked to MoveHandler!");
+        }
       } else {
         this.notification.error("Move validation failed", { duration: 3000 });
       }

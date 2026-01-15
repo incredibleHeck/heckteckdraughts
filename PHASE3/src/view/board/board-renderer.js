@@ -48,7 +48,7 @@ export class BoardRenderer {
     this.container.style.width = `${this.totalBoardSize}px`;
     this.container.style.height = `${this.totalBoardSize}px`;
     this.container.style.backgroundImage =
-      'url("assets/images/flipped_board.jpg")';
+      'url("./assets/images/flipped_board.jpg")';
     this.container.style.backgroundSize = "cover";
     this.container.style.backgroundPosition = "center";
 

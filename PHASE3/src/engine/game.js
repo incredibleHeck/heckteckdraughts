@@ -111,87 +111,102 @@ export class Game {
   // ============================================
 
   makeMove(move, thinkingTime = 0) {
+    console.log("Game.makeMove started:", move);
     // Validate move using MoveValidator
-    if (!this.moveValidator.isValidMove(this, move)) {
+    const isValid = this.moveValidator.isValidMove(this, move);
+    console.log("Move validation result:", isValid);
+    if (!isValid) {
       return false;
     }
 
     // Check maximum capture rule using MoveValidator
-    if (this.moveValidator.violatesMaxCaptureRule(this, move)) {
+    const violatesMax = this.moveValidator.violatesMaxCaptureRule(this, move);
+    console.log("Violates max capture rule:", violatesMax);
+    if (violatesMax) {
       return false;
     }
 
-    const startTime = Date.now();
-    const piece = this.getPiece(move.from.row, move.from.col);
-    const isCapture = this.moveValidator.isCapture(move);
-    const capturedPieces = [];
+    try {
+      const startTime = Date.now();
+      const piece = this.getPiece(move.from.row, move.from.col);
+      const isCapture = this.moveValidator.isCapture(move);
+      const capturedPieces = [];
 
-    // Record captured pieces for potential undo
-    if (isCapture) {
-      const captured = this.captureHandler.getCapturedPieces(this.pieces, move);
-      capturedPieces.push(...captured);
-    }
+      console.log("Piece being moved:", piece, "isCapture:", isCapture);
 
-    // Create comprehensive move record
-    const moveRecord = {
-      from: { ...move.from },
-      to: { ...move.to },
-      piece,
-      captures: move.captures ? [...move.captures] : [],
-      capturedPieces,
-      notation: this.getMoveNotation(move),
-      timestamp: Date.now(),
-      moveNumber: this.moveHistory.length + 1,
-      player: this.currentPlayer,
-      thinkingTime: thinkingTime || Date.now() - startTime,
-      wasPromotion: false,
-      previousFEN: this.getFEN(),
-    };
-
-    // Execute move on board
-    this.setPiece(move.from.row, move.from.col, PIECE.NONE);
-    this.setPiece(move.to.row, move.to.col, piece);
-
-    // Remove captured pieces
-    if (isCapture) {
-      for (const cap of move.captures) {
-        this.setPiece(cap.row, cap.col, PIECE.NONE);
+      // Record captured pieces for potential undo
+      if (isCapture) {
+        const captured = this.captureHandler.getCapturedPieces(this.pieces, move);
+        capturedPieces.push(...captured);
+        console.log("Captured pieces identified:", capturedPieces);
       }
-      this.statistics.captures[this.currentPlayer] += move.captures.length;
-      this.movesSinceCapture = 0;
-    } else {
-      this.movesSinceCapture++;
+
+      // Create comprehensive move record
+      const moveRecord = {
+        from: { ...move.from },
+        to: { ...move.to },
+        piece,
+        captures: move.captures ? [...move.captures] : [],
+        capturedPieces,
+        notation: this.getMoveNotation(move),
+        timestamp: Date.now(),
+        moveNumber: this.moveHistory.length + 1,
+        player: this.currentPlayer,
+        thinkingTime: thinkingTime || Date.now() - startTime,
+        wasPromotion: false,
+        previousFEN: this.getFEN(),
+      };
+
+      // Execute move on board
+      this.setPiece(move.from.row, move.from.col, PIECE.NONE);
+      this.setPiece(move.to.row, move.to.col, piece);
+
+      // Remove captured pieces
+      if (isCapture) {
+        for (const cap of move.captures) {
+          this.setPiece(cap.row, cap.col, PIECE.NONE);
+        }
+        this.statistics.captures[this.currentPlayer] += move.captures.length;
+        this.movesSinceCapture = 0;
+      } else {
+        this.movesSinceCapture++;
+      }
+
+      // Handle promotion (if not continuing capture)
+      if (
+        this.shouldPromote(piece, move.to.row) &&
+        !this.canContinueCapturing(move.to.row, move.to.col)
+      ) {
+        const newKing =
+          piece === PIECE.WHITE ? PIECE.WHITE_KING : PIECE.BLACK_KING;
+        this.setPiece(move.to.row, move.to.col, newKing);
+        moveRecord.wasPromotion = true;
+        this.statistics.promotions[this.currentPlayer]++;
+      }
+
+      // Switch player (normal mode)
+      if (this.gameMode === GAME_MODE.NORMAL) {
+        this.currentPlayer =
+          this.currentPlayer === PLAYER.WHITE ? PLAYER.BLACK : PLAYER.WHITE;
+      }
+
+      console.log("Move executed successfully. New player:", this.currentPlayer);
+
+      // Update records
+      moveRecord.fen = this.getFEN();
+      this.moveHistory.push(moveRecord);
+      this.statistics.totalMoves++;
+      this.statistics.thinkingTime[moveRecord.player] += moveRecord.thinkingTime;
+
+      this.recordPosition();
+      this.updateGameState();
+      this.invalidateCache();
+
+      return true;
+    } catch (error) {
+      console.error("Critical error in Game.makeMove:", error);
+      return false;
     }
-
-    // Handle promotion (if not continuing capture)
-    if (
-      this.shouldPromote(piece, move.to.row) &&
-      !this.canContinueCapturing(move.to.row, move.to.col)
-    ) {
-      const newKing =
-        piece === PIECE.WHITE ? PIECE.WHITE_KING : PIECE.BLACK_KING;
-      this.setPiece(move.to.row, move.to.col, newKing);
-      moveRecord.wasPromotion = true;
-      this.statistics.promotions[this.currentPlayer]++;
-    }
-
-    // Switch player (normal mode)
-    if (this.gameMode === GAME_MODE.NORMAL) {
-      this.currentPlayer =
-        this.currentPlayer === PLAYER.WHITE ? PLAYER.BLACK : PLAYER.WHITE;
-    }
-
-    // Update records
-    moveRecord.fen = this.getFEN();
-    this.moveHistory.push(moveRecord);
-    this.statistics.totalMoves++;
-    this.statistics.thinkingTime[moveRecord.player] += moveRecord.thinkingTime;
-
-    this.recordPosition();
-    this.updateGameState();
-    this.invalidateCache();
-
-    return true;
   }
 
   undoMove() {

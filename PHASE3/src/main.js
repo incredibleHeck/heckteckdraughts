@@ -34,6 +34,9 @@ class GameController {
         this.historyHandler = new HistoryHandler(this.game, this.board, this.ui, this.notification, this.history);
         this.editModeHandler = new EditModeHandler(this.game, this.board, this.ui, this.notification);
 
+        // Link handlers
+        this.moveHandler.setAIHandler(this.aiHandler);
+
         // Game state
         this.gameInitialized = false;
         this.gameInProgress = true;
@@ -108,6 +111,12 @@ class GameController {
         
         // UI events - Difficulty
         this.ui.on('difficultyChange', (level) => this.handleDifficultyChange(level));
+        
+        // UI events - Game mode
+        this.ui.on('gameModeChange', (mode) => {
+            this.aiHandler.setMode(mode);
+            this.notification.info(`Game mode set to ${mode === 'pva' ? 'Player vs AI' : 'Player vs Player'}`, { duration: 2000 });
+        });
         
         // UI events - Edit mode
         this.ui.on('editModeToggle', (enabled) => {

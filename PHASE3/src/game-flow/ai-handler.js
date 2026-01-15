@@ -15,19 +15,40 @@ export class AIHandler {
     this.moveHandler = moveHandler;
     this.aiThinking = false;
     this.lastAIMove = null;
+    this.mode = "pva"; // Default: Player vs AI
+  }
+
+  /**
+   * Set game mode
+   * @param {string} mode - 'pva' or 'pvp'
+   */
+  setMode(mode) {
+    this.mode = mode;
+    console.log("AI Handler mode set to:", mode);
   }
 
   /**
    * Check if it's AI's turn and trigger AI move if needed
    */
   async checkIfAITurn() {
+    console.log("AI check - Mode:", this.mode, "Current Player:", this.game.currentPlayer, "Game State:", this.game.gameState, "AI Thinking:", this.aiThinking);
+    
+    // Only move if in Player vs AI mode
+    if (this.mode !== "pva") {
+      console.log("Not in AI mode (PvP).");
+      return;
+    }
+
     if (
       this.game.currentPlayer === PLAYER.BLACK &&
       this.game.gameState === GAME_STATE.ONGOING &&
       !this.aiThinking
     ) {
+      console.log("AI turn confirmed. Triggering AI move in 100ms...");
       // Small delay to prevent immediate response
       setTimeout(() => this.triggerAIMove(), 100);
+    } else {
+      console.log("Not AI turn or AI already thinking.");
     }
   }
 
@@ -35,7 +56,13 @@ export class AIHandler {
    * Trigger AI to find and make the best move
    */
   async triggerAIMove() {
+    console.log("triggerAIMove called. State:", {
+      thinking: this.aiThinking,
+      gameState: this.game.gameState
+    });
+    
     if (this.aiThinking || this.game.gameState !== GAME_STATE.ONGOING) {
+      console.warn("AI already thinking or game not ongoing. Aborting trigger.");
       return;
     }
 
@@ -53,7 +80,9 @@ export class AIHandler {
       };
 
       // Request move from AI
+      console.log("Requesting AI move from worker for position:", position);
       const aiMove = await this.ai.getMove(position, this.game.moveHistory);
+      console.log("AI worker returned move:", aiMove);
       const thinkingTime = Date.now() - aiStartTime;
 
       // Close thinking notification

@@ -35,22 +35,19 @@ export class CaptureHandler {
     const currentPlayer = isWhite ? PLAYER.WHITE : PLAYER.BLACK;
 
     // Determine possible jump directions
-    const directions = isKing
-      ? Object.values(DIRECTIONS)
-      : isWhite
-      ? DIRECTIONS.WHITE_MOVES
-      : DIRECTIONS.BLACK_MOVES;
+    // In International Draughts, all pieces jump in all 4 directions
+    const directions = DIRECTIONS.KING_MOVES;
 
     // Try each direction for a capture
     for (const dir of directions) {
       const jumpOverPos = {
-        row: currentPos.row + dir.row,
-        col: currentPos.col + dir.col,
+        row: currentPos.row + dir.dy,
+        col: currentPos.col + dir.dx,
       };
 
       const landPos = {
-        row: jumpOverPos.row + dir.row,
-        col: jumpOverPos.col + dir.col,
+        row: jumpOverPos.row + dir.dy,
+        col: jumpOverPos.col + dir.dx,
       };
 
       // Check if jump is valid
