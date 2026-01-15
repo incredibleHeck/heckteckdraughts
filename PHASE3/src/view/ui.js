@@ -55,7 +55,10 @@ export class UI {
     Object.entries(navButtons).forEach(([id, event]) => {
       const el = document.getElementById(id);
       if (el) {
-        el.addEventListener("click", () => this.emit(event));
+        el.addEventListener("click", () => {
+          console.log(`UI button clicked: ${id}, emitting: ${event}`);
+          this.emit(event);
+        });
       }
     });
 
@@ -69,7 +72,10 @@ export class UI {
     Object.entries(fenButtons).forEach(([id, event]) => {
       const el = document.getElementById(id);
       if (el) {
-        el.addEventListener("click", () => this.emit(event));
+        el.addEventListener("click", () => {
+          console.log(`UI button clicked: ${id}, emitting: ${event}`);
+          this.emit(event);
+        });
       }
     });
 
@@ -103,7 +109,10 @@ export class UI {
     Object.entries(editPanelButtons).forEach(([id, event]) => {
       const el = document.getElementById(id);
       if (el) {
-        el.addEventListener("click", () => this.emit(event));
+        el.addEventListener("click", () => {
+          console.log(`UI button clicked: ${id}, emitting: ${event}`);
+          this.emit(event);
+        });
       }
     });
 
@@ -111,9 +120,11 @@ export class UI {
     const pieceBtns = document.querySelectorAll(".piece-btn");
     pieceBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
+        const piece = parseInt(btn.dataset.piece, 10);
+        console.log("Piece btn clicked, selected piece type:", piece);
         pieceBtns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        this.emit("editPieceSelected", parseInt(btn.dataset.piece, 10));
+        this.emit("editPieceSelected", piece);
       });
     });
   }

@@ -1,128 +1,41 @@
 /**
- * Quiescence Search Engine
- * Searches until position is "quiet" (no tactical opportunities)
- *
- * Features:
- * - Stand-pat evaluation
- * - Capture-only search
- * - MVV-LVA move ordering
- * - Delta pruning
- * - Selective depth tracking
- *
- * @author codewithheck
- * AI Search Refactor - Modular Architecture
+ * Quiescence Search
+ * * * Logic:
+ * - If I stand pat (do nothing), is my score >= Beta? (Cutoff)
+ * - If not, check all CAPTURES.
+ * - This prevents the "Horizon Effect" where the AI stops search in the middle of a trade.
  */
 
-import { SEARCH_CONFIG } from "../ai/ai.constants.js";
 import { getAvailableCaptures, makeMove } from "../ai/ai.utils.js";
 
 export class QuiescenceSearch {
   constructor(evaluator) {
     this.evaluator = evaluator;
-    this.nodeCount = 0;
+    this.maxQDepth = 10; // Prevent infinite capture loops
   }
 
-  /**
-   * Quiescence search - search until position is "quiet"
-   * PRESERVES EXACT LOGIC from working version
-   */
-  search(position, alpha, beta, depth) {
-    this.nodeCount++;
-
-    if (depth <= 0) {
-      return this.evaluator.evaluatePosition(position);
-    }
-
-    // Stand pat evaluation
+  search(position, alpha, beta, qPly = 0) {
+    // 1. Stand-Pat (Static Evaluation)
+    // "If I do nothing, how good is the position?"
     const standPat = this.evaluator.evaluatePosition(position);
 
-    // Beta cutoff
-    if (standPat >= beta) {
-      return beta;
-    }
+    if (standPat >= beta) return beta; // Beta Cutoff
+    if (alpha < standPat) alpha = standPat;
 
-    // Update alpha
-    if (alpha < standPat) {
-      alpha = standPat;
-    }
+    if (qPly > this.maxQDepth) return standPat;
 
-    // Delta pruning - if we're too far behind, don't search captures
-    if (SEARCH_CONFIG.DELTA_PRUNING?.ENABLED) {
-      if (standPat < alpha - SEARCH_CONFIG.DELTA_PRUNING.MARGIN) {
-        return alpha;
-      }
-    }
-
-    // Get only capture moves for quiescence
+    // 2. Generate Captures ONLY
+    // In optimized utils, getAvailableCaptures handles the "Max Capture" rule internally.
     const captures = getAvailableCaptures(position);
 
-    if (captures.length === 0) {
-      return standPat;
-    }
+    for (const move of captures) {
+      const newPos = makeMove(position, move);
+      const score = -this.search(newPos, -beta, -alpha, qPly + 1);
 
-    // Order captures (MVV-LVA - Most Valuable Victim, Least Valuable Attacker)
-    const orderedCaptures = this.orderCaptures(captures, position);
-
-    for (const move of orderedCaptures) {
-      const newPosition = makeMove(position, move);
-      const score = -this.search(newPosition, -beta, -alpha, depth - 1);
-
-      if (score >= beta) {
-        return beta;
-      }
-
-      if (score > alpha) {
-        alpha = score;
-      }
+      if (score >= beta) return beta;
+      if (score > alpha) alpha = score;
     }
 
     return alpha;
-  }
-
-  /**
-   * Order captures for quiescence search (MVV-LVA)
-   * Most Valuable Victim, Least Valuable Attacker
-   */
-  orderCaptures(captures, position) {
-    const pieceValues = { 1: 100, 2: 100, 3: 400, 4: 400 }; // MAN, KING values
-
-    captures.forEach((move) => {
-      let score = 0;
-
-      if (move.captures && move.captures.length > 0) {
-        // Most Valuable Victim
-        for (const capture of move.captures) {
-          const victimPiece = position.pieces[capture.row][capture.col];
-          score += pieceValues[victimPiece] || 0;
-        }
-
-        // Least Valuable Attacker
-        const attackerPiece = position.pieces[move.from.row][move.from.col];
-        score -= (pieceValues[attackerPiece] || 0) / 10; // Small penalty for valuable attackers
-
-        // Multiple captures bonus
-        score += move.captures.length * 50;
-      }
-
-      move.captureScore = score;
-    });
-
-    return captures.sort(
-      (a, b) => (b.captureScore || 0) - (a.captureScore || 0)
-    );
-  }
-
-  /**
-   * Get node count
-   */
-  getNodeCount() {
-    return this.nodeCount;
-  }
-
-  /**
-   * Reset statistics
-   */
-  resetStats() {
-    this.nodeCount = 0;
   }
 }

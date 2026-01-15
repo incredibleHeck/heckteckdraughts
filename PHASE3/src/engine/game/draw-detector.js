@@ -1,169 +1,93 @@
 /**
- * Draw Detector - Detects all draw conditions
- * Separated for clarity and testability
- * @author codewithheck
- * Refactor Phase 1 - Game Logic Split
+ * Ruthless Draw Detector
+ * * * Optimizations:
+ * - Single Pass Scan (Material, Counts, King check combined)
+ * - Correct International Draughts Rules (No Blockade Draw)
+ * - Instant Repetition Check (Via Hash)
  */
 
-import { BOARD_SIZE, PIECE, PLAYER } from "../constants.js";
+import { BOARD_SIZE, PIECE } from "../constants.js";
 
 export class DrawDetector {
-  /**
-   * Get the reason for a draw, if any
-   * Returns: 'repetition', 'fifty-move', 'material', 'blockade', or null
-   */
   static getDrawReason(game) {
+    // 1. Repetition (Fastest check)
     if (this.isDrawByRepetition(game)) return "repetition";
+
+    // 2. 50-Move Rule (Fast check)
+    // Note: International Draughts often uses 25 moves for 3 kings vs 1 king.
+    // We stick to standard 50-move (actually 25 moves per player) without capture/pawn move.
     if (this.isDrawBy50MoveRule(game)) return "fifty-move";
-    if (this.isDrawByInsufficientMaterial(game)) return "material";
-    if (this.isDrawByBlockade(game)) return "blockade";
-    return null;
+
+    // 3. Material Scan (O(N) - Do this last)
+    return this.isDrawByInsufficientMaterial(game) ? "material" : null;
   }
 
-  /**
-   * Check draw by threefold repetition
-   * Same position appears 3 times
-   */
   static isDrawByRepetition(game) {
-    if (
-      !game.positionRecorder ||
-      game.positionRecorder.getPositions().length === 0
-    ) {
-      return false;
+    if (!game.positionRecorder) return false;
+    // Use Hash-based check from Optimized PositionRecorder
+    // Assuming game.toPosition() generates the object for hashing
+    const count = game.positionRecorder.getRepetitionCount(game.toPosition());
+    return count >= 3;
+  }
+
+  static isDrawBy50MoveRule(game) {
+    // Standard rule: 50 moves (25 each) without pawn move or capture
+    // game.movesSinceAction tracks half-moves (plies)
+    return game.movesSinceAction >= 50;
+  }
+
+  static isDrawByInsufficientMaterial(game) {
+    // Single Pass Scan
+    let whiteCount = 0,
+      blackCount = 0;
+    let whiteKings = 0,
+      blackKings = 0;
+    let whiteMan = 0,
+      blackMan = 0;
+
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      let c = r % 2 === 0 ? 1 : 0;
+      for (; c < BOARD_SIZE; c += 2) {
+        const piece = game.getPiece(r, c);
+        if (piece === PIECE.NONE) continue;
+
+        if (piece === PIECE.WHITE) {
+          whiteCount++;
+          whiteMan++;
+        } else if (piece === PIECE.BLACK) {
+          blackCount++;
+          blackMan++;
+        } else if (piece === PIECE.WHITE_KING) {
+          whiteCount++;
+          whiteKings++;
+        } else if (piece === PIECE.BLACK_KING) {
+          blackCount++;
+          blackKings++;
+        }
+      }
     }
 
-    const currentFEN = game.getFEN();
-    const frequency = game.positionRecorder.getFrequency();
-
-    return (frequency[currentFEN] || 0) >= 3;
-  }
-
-  /**
-   * Check draw by 50-move rule
-   * No captures or pawn moves for 50 full moves (100 half-moves)
-   */
-  static isDrawBy50MoveRule(game) {
-    return game.movesSinceCapture >= 50;
-  }
-
-  /**
-   * Check draw by insufficient material
-   * Neither side can win (e.g. 1 vs 1)
-   */
-  static isDrawByInsufficientMaterial(game) {
-    const { whiteCount, blackCount } = this.countPieces(game);
-
-    // Only draw if both sides have only 1 piece left (International Draughts rule variant)
-    return whiteCount === 1 && blackCount === 1;
-  }
-
-  /**
-   * Check draw by blockade
-   * Current player has no legal moves but not checkmated
-   */
-  static isDrawByBlockade(game) {
-    const moves = game.getLegalMoves();
-
-    // If there are legal moves, not blockade
-    if (moves.length > 0) return false;
-
-    // No legal moves - check if both sides have pieces
-    const { whiteCount, blackCount } = this.countPieces(game);
-
-    // Both sides have pieces but current player can't move = blockade/draw
-    return whiteCount > 0 && blackCount > 0;
-  }
-
-  /**
-   * Check if position is "drawish" (likely to end in draw)
-   * Used for evaluation tuning
-   */
-  static isDrawish(game) {
-    const { totalCount, whiteMaterial, blackMaterial } =
-      this.getMaterialBalance(game);
-
-    // Very few pieces remaining
-    if (totalCount <= 4) return true;
-
-    // Balanced endgame with few pieces
-    if (totalCount <= 8 && Math.abs(whiteMaterial - blackMaterial) <= 100) {
+    // 1 vs 1 King is Draw
+    if (
+      whiteCount === 1 &&
+      blackCount === 1 &&
+      whiteKings === 1 &&
+      blackKings === 1
+    ) {
       return true;
     }
 
-    // All pieces are kings (no pawns to push)
-    if (this.allKings(game)) return true;
+    // 2 Kings vs 1 King is technically not a forced draw until moves expire,
+    // but effectively drawn if played perfectly. We usually let 50-move rule handle this.
 
     return false;
   }
 
-  // ============ Helper Methods ============
-
-  static countPieces(game) {
-    let whiteCount = 0,
-      blackCount = 0;
-
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        const piece = game.getPiece(r, c);
-
-        if (piece === PIECE.WHITE || piece === PIECE.WHITE_KING) {
-          whiteCount++;
-        } else if (piece === PIECE.BLACK || piece === PIECE.BLACK_KING) {
-          blackCount++;
-        }
-      }
-    }
-
-    return {
-      whiteCount,
-      blackCount,
-      totalCount: whiteCount + blackCount,
-    };
-  }
-
-  static getMaterialBalance(game) {
-    let whiteMaterial = 0,
-      blackMaterial = 0,
-      totalCount = 0;
-
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        const piece = game.getPiece(r, c);
-
-        if (piece === PIECE.WHITE) {
-          whiteMaterial += 100;
-          totalCount++;
-        } else if (piece === PIECE.WHITE_KING) {
-          whiteMaterial += 400;
-          totalCount++;
-        } else if (piece === PIECE.BLACK) {
-          blackMaterial += 100;
-          totalCount++;
-        } else if (piece === PIECE.BLACK_KING) {
-          blackMaterial += 400;
-          totalCount++;
-        }
-      }
-    }
-
-    return {
-      whiteMaterial,
-      blackMaterial,
-      totalCount,
-      difference: Math.abs(whiteMaterial - blackMaterial),
-    };
-  }
-
-  static allKings(game) {
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        const piece = game.getPiece(r, c);
-
-        if (piece === PIECE.WHITE || piece === PIECE.BLACK) {
-          return false;
-        }
-      }
-    }
-    return true;
+  /**
+   * NOTE: "Blockade" (No legal moves) is a LOSS in International Draughts.
+   * Do NOT return a draw reason for it.
+   */
+  static isDrawByBlockade(game) {
+    return false;
   }
 }

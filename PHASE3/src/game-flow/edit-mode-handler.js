@@ -48,23 +48,36 @@ export class EditModeHandler {
 
   /**
    * Handle edit square click
-   * @param {Object} square - The square being edited
+   * @param {Object} square - The square being edited (includes row, col, and button)
    */
   handleEditSquare(square) {
     if (!this.editMode) return;
 
     try {
-      const piece = this.game.getPiece(square.row, square.col);
+      const { row, col, button } = square;
+      let pieceToPlace = this.selectedPiece;
 
-      if (piece === PIECE.NONE) {
-        // Place selected piece
-        this.game.setPiece(square.row, square.col, this.selectedPiece);
-      } else if (piece === this.selectedPiece) {
-        // Remove piece if same piece clicked
-        this.game.setPiece(square.row, square.col, PIECE.NONE);
+      // Special handling based on mouse buttons as requested
+      if (button === 2) {
+        // Right click -> White piece
+        pieceToPlace = PIECE.WHITE;
+      } else if (button === 0) {
+        // Left click -> Use selected piece from palette, default to Black if "Clear" is selected but we want a quick add
+        if (this.selectedPiece === PIECE.NONE) {
+          // If "Clear" is selected but user clicks, maybe they want Black as default for left click?
+          // Let's stick to: if palette is used, use it. If not, follow the requested color mapping.
+          pieceToPlace = PIECE.BLACK;
+        }
+      }
+
+      const currentPiece = this.game.getPiece(row, col);
+
+      if (currentPiece === pieceToPlace) {
+        // If clicking with the same piece color already there, clear it
+        this.game.setPiece(row, col, PIECE.NONE);
       } else {
-        // Cycle to next piece
-        this.game.setPiece(square.row, square.col, this.getNextPiece(piece));
+        // Place the piece
+        this.game.setPiece(row, col, pieceToPlace);
       }
 
       this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
@@ -97,11 +110,12 @@ export class EditModeHandler {
    */
   setSelectedPiece(piece) {
     if (
-      [PIECE.WHITE, PIECE.WHITE_KING, PIECE.BLACK, PIECE.BLACK_KING].includes(
+      [PIECE.NONE, PIECE.WHITE, PIECE.WHITE_KING, PIECE.BLACK, PIECE.BLACK_KING].includes(
         piece
       )
     ) {
       this.selectedPiece = piece;
+      console.log("EditModeHandler: selected piece set to", piece);
     }
   }
 

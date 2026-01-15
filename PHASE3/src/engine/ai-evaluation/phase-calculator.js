@@ -1,139 +1,56 @@
 /**
- * Phase Calculator
- * Determines game phase and applies phase-based weighting
- *
- * Handles:
- * - Opening/middlegame/endgame detection
- * - Phase blending between midgame and endgame
- * - Piece count analysis
- *
- * @author codewithheck
- * AI Evaluation Refactor - Modular Architecture
+ * Phase Calculator (10x10 Optimized)
+ * Determines game phase for Tapered Evaluation.
+ * * Tuning for International Draughts (10x10):
+ * - Start: 40 pieces (Phase 1.0)
+ * - Critical Transition: 16-20 pieces
+ * - Deep Endgame: < 6 pieces (Phase 0.0)
  */
 
-import { PIECE, PLAYER, BOARD_SIZE } from "../constants.js";
 import { countPieces } from "../ai/ai.utils.js";
 
 export class PhaseCalculator {
   constructor() {
-    this.openingThreshold = 16; // Pieces remain > this = opening
-    this.middlegameThreshold = 10; // Pieces between this and opening = middlegame
-    // < middlegameThreshold = endgame
+    // 10x10 Draughts Thresholds
+    this.OPENING_LIMIT = 32; // High piece count
+    this.ENDGAME_LIMIT = 6; // Pure endgame calculation starts here
+    this.MIDGAME_RANGE = 24; // Divisor for smoothing
   }
 
   /**
-   * Calculate phase value (0 = endgame, 1 = opening/middlegame)
-   * Used for blending midgame and endgame evaluation scores
+   * Calculate phase factor (0.0 to 1.0)
+   * 1.0 = Midgame/Opening (Structure focus)
+   * 0.0 = Endgame (King/Promotion focus)
    */
   getPhase(position) {
     const { whiteCount, blackCount } = countPieces(position);
     const totalPieces = whiteCount + blackCount;
 
-    // Normalized to 0-1 range
-    return Math.min(1, Math.max(0, totalPieces / 24));
+    // Linear interpolation between ENDGAME_LIMIT and (ENDGAME_LIMIT + MIDGAME_RANGE)
+    // Formula: (Total - 6) / 24.
+    // At 30 pieces: (30-6)/24 = 1.0 (Midgame)
+    // At 18 pieces: (18-6)/24 = 0.5 (Hybrid)
+    // At 6 pieces:  (6-6)/24  = 0.0 (Pure Endgame)
+
+    let phase = (totalPieces - this.ENDGAME_LIMIT) / this.MIDGAME_RANGE;
+
+    // Clamp between 0 and 1
+    return Math.min(1, Math.max(0, phase));
   }
 
   /**
-   * Get phase name
-   */
-  getPhaseName(position) {
-    const { whiteCount, blackCount } = countPieces(position);
-    const totalPieces = whiteCount + blackCount;
-
-    if (totalPieces > this.openingThreshold) {
-      return "opening";
-    } else if (totalPieces > this.middlegameThreshold) {
-      return "middlegame";
-    } else {
-      return "endgame";
-    }
-  }
-
-  /**
-   * Blend two scores based on game phase
-   * mgScore = midgame score, egScore = endgame score
-   * phase value 0-1 (0=full endgame, 1=full middlegame)
+   * Blend scores using the phase
    */
   blendScores(mgScore, egScore, position) {
     const phase = this.getPhase(position);
+    // Linear Interpolation: (MG * Phase) + (EG * (1-Phase))
     return Math.round(mgScore * phase + egScore * (1 - phase));
   }
 
-  /**
-   * Get phase-appropriate weight adjustments
-   */
-  getPhaseWeights(position) {
-    const phase = this.getPhaseName(position);
-
-    switch (phase) {
-      case "opening":
-        return {
-          material: 1.0,
-          positional: 0.8,
-          mobility: 1.2,
-          tactical: 0.5,
-          safety: 0.3,
-        };
-      case "middlegame":
-        return {
-          material: 1.0,
-          positional: 1.0,
-          mobility: 1.0,
-          tactical: 1.0,
-          safety: 0.8,
-        };
-      case "endgame":
-        return {
-          material: 1.0,
-          positional: 1.2,
-          mobility: 1.5,
-          tactical: 0.8,
-          safety: 1.5,
-        };
-      default:
-        return {
-          material: 1.0,
-          positional: 1.0,
-          mobility: 1.0,
-          tactical: 1.0,
-          safety: 1.0,
-        };
-    }
-  }
-
-  /**
-   * Check if position is likely an endgame
-   */
-  isEndgame(position) {
-    return this.getPhaseName(position) === "endgame";
-  }
-
-  /**
-   * Check if position is likely opening
-   */
-  isOpening(position) {
-    return this.getPhaseName(position) === "opening";
-  }
-
-  /**
-   * Check if position is likely middlegame
-   */
-  isMiddlegame(position) {
-    return this.getPhaseName(position) === "middlegame";
-  }
-
-  /**
-   * Get piece count for phase analysis
-   */
-  getPieceCount(position) {
-    return countPieces(position);
-  }
-
-  /**
-   * Set phase thresholds
-   */
-  setThresholds(opening, middlegame) {
-    this.openingThreshold = opening;
-    this.middlegameThreshold = middlegame;
+  getPhaseName(position) {
+    const phase = this.getPhase(position);
+    if (phase > 0.8) return "opening";
+    if (phase > 0.2) return "middlegame";
+    return "endgame";
   }
 }

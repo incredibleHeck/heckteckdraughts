@@ -1,297 +1,93 @@
 /**
- * Pattern Evaluator
- * Evaluates positional patterns and structure
- *
- * Handles:
- * - Pattern extraction (SCAN-style stub)
- * - Protected/hanging piece detection
- * - King safety calculation
- *
- * @author codewithheck
- * AI Evaluation Refactor - Modular Architecture
+ * Ruthless Pattern Evaluator
+ * Scans for specific structural weaknesses and formation strengths.
+ * * Key Concepts:
+ * - Hanging Pieces: Pieces without diagonal support behind them.
+ * - Base Holes: Gaps in the back rank that allow enemy Kings.
+ * - Trios: Small triangular formations that are hard to penetrate.
  */
 
-import { PIECE, PLAYER, BOARD_SIZE } from "../constants.js";
+import { PIECE, BOARD_SIZE } from "../constants.js";
 
 export class PatternEvaluator {
-  constructor(patternTables = null) {
-    this.patternTables = patternTables;
-    this.PATTERN_SIZE = 12;
-    this.PERM_0 = [11, 10, 7, 6, 3, 2, 9, 8, 5, 4, 1, 0];
-    this.PERM_1 = [0, 1, 4, 5, 8, 9, 2, 3, 6, 7, 10, 11];
+  constructor() {
+    this.weights = {
+      HANGING_PIECE: -25, // Major liability
+      BASE_HOLE: -30, // Dangerous gap
+      TRIO_FORMATION: 10, // Strong structure
+      ARROWHEAD: 15, // Offensive structure
+    };
   }
 
-  /**
-   * Extract patterns from position (SCAN-style)
-   */
   extractPatterns(position) {
-    let index = 0;
-    let pos = 0;
-
-    for (let r = 0; r < BOARD_SIZE && pos < this.PATTERN_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE && pos < this.PATTERN_SIZE; c++) {
-        if ((r + c) % 2 === 1) {
-          const piece = position.pieces[r][c];
-          index *= 3;
-
-          if (piece === PIECE.NONE) {
-            index += 0;
-          } else if (piece === PIECE.WHITE || piece === PIECE.BLACK) {
-            index += 1;
-          } else {
-            index += 2; // King
-          }
-          pos++;
-        }
-      }
-    }
-
-    const tritIndex0 = this.permuteIndex(
-      index,
-      this.PATTERN_SIZE,
-      3,
-      3,
-      this.PERM_0
-    );
-    const tritIndex1 = this.permuteIndex(
-      index,
-      this.PATTERN_SIZE,
-      3,
-      3,
-      this.PERM_1
-    );
-
     let score = 0;
 
-    // Use pattern tables if available
-    if (this.patternTables) {
-      score += this.getPatternScore(tritIndex0);
-      score += this.getPatternScore(tritIndex1);
-    }
-
-    return score;
-  }
-
-  /**
-   * Permute index for pattern evaluation
-   */
-  permuteIndex(index, size, bf, bt, perm) {
-    let from = index;
-    let to = 0;
-
-    for (let i = 0; i < size; i++) {
-      const digit = from % bf;
-      from = Math.floor(from / bf);
-      const j = perm[i];
-      to += digit * Math.pow(bt, j);
-    }
-
-    return to;
-  }
-
-  /**
-   * Get pattern score from table
-   */
-  getPatternScore(index) {
-    if (!this.patternTables) return 0;
-
-    // Stub - would look up in actual pattern tables
-    return 0;
-  }
-
-  /**
-   * Count hanging pieces (undefended pieces under attack)
-   */
-  countHangingPieces(position, isWhite) {
-    let hanging = 0;
-
+    // We scan inner board for formations (excluding edges for simplicity in 2D array)
     for (let r = 0; r < BOARD_SIZE; r++) {
       for (let c = 0; c < BOARD_SIZE; c++) {
-        const piece = position.pieces[r][c];
+        // Skip invalid/empty squares
+        if ((r + c) % 2 === 0) continue;
 
-        // Check if it's a piece of the color we're evaluating
-        if (
-          (isWhite && (piece === PIECE.WHITE || piece === PIECE.WHITE_KING)) ||
-          (!isWhite && (piece === PIECE.BLACK || piece === PIECE.BLACK_KING))
-        ) {
-          // Check if piece is under attack
-          if (this.isPieceUnderAttack(position, r, c)) {
-            // Check if piece is defended
-            if (!this.isPieceDefended(position, r, c)) {
-              hanging++;
+        const piece = position.pieces[r][c];
+        if (piece === PIECE.NONE) continue;
+
+        const isWhite = piece === PIECE.WHITE || piece === PIECE.WHITE_KING;
+        const multiplier = isWhite ? 1 : -1;
+        const dir = isWhite ? 1 : -1; // "Behind" direction
+
+        // 1. Detect Hanging Pieces (No support behind)
+        // A piece at (r,c) needs support at (r+1, c-1) or (r+1, c+1) for White
+        if (!this.isKing(piece)) {
+          const backR = r + dir;
+          // If we are not at the back edge
+          if (backR >= 0 && backR < BOARD_SIZE) {
+            let supported = false;
+            // Check Left Back
+            if (c - 1 >= 0 && position.pieces[backR][c - 1] !== PIECE.NONE)
+              supported = true;
+            // Check Right Back
+            if (
+              c + 1 < BOARD_SIZE &&
+              position.pieces[backR][c + 1] !== PIECE.NONE
+            )
+              supported = true;
+
+            if (!supported) {
+              score += this.weights.HANGING_PIECE * multiplier;
+            }
+          }
+        }
+
+        // 2. Base Holes (The "Sieve")
+        // Check Row 0 (Black Base) and Row 9 (White Base)
+        if (isWhite && r === 9) {
+          // White piece on base - Good.
+          // Logic handled in PositionalEvaluator, but here we penalize *missing* ones conceptually?
+          // Actually, better to check for missing neighbors in the base rank.
+        }
+
+        // 3. Formation Detection (Mini-Triangles)
+        // A piece at (r,c) supported by two pieces behind it forms a strong triangle.
+        if (!this.isKing(piece)) {
+          const frontR = r - dir;
+          if (frontR >= 0 && frontR < BOARD_SIZE) {
+            // Check if this piece is the "tip" of an arrowhead
+            const leftBack =
+              c - 1 >= 0 && position.pieces[r + dir][c - 1] === piece;
+            const rightBack =
+              c + 1 < BOARD_SIZE && position.pieces[r + dir][c + 1] === piece;
+
+            if (leftBack && rightBack) {
+              score += this.weights.TRIO_FORMATION * multiplier;
             }
           }
         }
       }
     }
-
-    return hanging;
+    return score;
   }
 
-  /**
-   * Count protected pieces
-   */
-  countProtectedPieces(position, isWhite) {
-    let protected_count = 0;
-
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        const piece = position.pieces[r][c];
-
-        // Check if it's a piece of the color we're evaluating
-        if (
-          (isWhite && (piece === PIECE.WHITE || piece === PIECE.WHITE_KING)) ||
-          (!isWhite && (piece === PIECE.BLACK || piece === PIECE.BLACK_KING))
-        ) {
-          if (this.isPieceDefended(position, r, c)) {
-            protected_count++;
-          }
-        }
-      }
-    }
-
-    return protected_count;
-  }
-
-  /**
-   * Check if piece is under attack
-   */
-  isPieceUnderAttack(position, r, c) {
-    // Check adjacent squares for enemy pieces (simplified check)
-    const directions = [
-      [1, 1],
-      [1, -1],
-      [-1, 1],
-      [-1, -1],
-    ];
-
-    for (const [dr, dc] of directions) {
-      const nr = r + dr;
-      const nc = c + dc;
-
-      if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-        const attackerPiece = position.pieces[nr][nc];
-        if (attackerPiece !== PIECE.NONE) {
-          // Check if it's an enemy piece
-          const myPiece = position.pieces[r][c];
-          const myIsWhite =
-            myPiece === PIECE.WHITE || myPiece === PIECE.WHITE_KING;
-          const attackerIsWhite =
-            attackerPiece === PIECE.WHITE || attackerPiece === PIECE.WHITE_KING;
-
-          if (myIsWhite !== attackerIsWhite) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Check if piece is defended (protected by friendly piece)
-   */
-  isPieceDefended(position, r, c) {
-    // Check adjacent squares for friendly pieces (simplified check)
-    const directions = [
-      [1, 1],
-      [1, -1],
-      [-1, 1],
-      [-1, -1],
-    ];
-
-    for (const [dr, dc] of directions) {
-      const nr = r + dr;
-      const nc = c + dc;
-
-      if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-        const defenderPiece = position.pieces[nr][nc];
-        if (defenderPiece !== PIECE.NONE) {
-          // Check if it's a friendly piece
-          const myPiece = position.pieces[r][c];
-          const myIsWhite =
-            myPiece === PIECE.WHITE || myPiece === PIECE.WHITE_KING;
-          const defenderIsWhite =
-            defenderPiece === PIECE.WHITE || defenderPiece === PIECE.WHITE_KING;
-
-          if (myIsWhite === defenderIsWhite) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Calculate king safety for a specific king position
-   */
-  calculateKingSafety(position, kingR, kingC, isWhite) {
-    let safety = 0;
-
-    // Check adjacent squares
-    const directions = [
-      [1, 1],
-      [1, -1],
-      [-1, 1],
-      [-1, -1],
-    ];
-    let safeMoves = 0;
-    let threatenedSquares = 0;
-
-    for (const [dr, dc] of directions) {
-      let nr = kingR + dr,
-        nc = kingC + dc;
-
-      while (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-        if (position.pieces[nr][nc] === PIECE.NONE) {
-          // Check if this square is threatened
-          if (!this.isSquareThreatened(position, nr, nc, !isWhite)) {
-            safeMoves++;
-          } else {
-            threatenedSquares++;
-          }
-        } else {
-          break; // Blocked by piece
-        }
-
-        nr += dr;
-        nc += dc;
-      }
-    }
-
-    safety = safeMoves * 2 - threatenedSquares * 1;
-    return safety;
-  }
-
-  /**
-   * Check if a square is threatened by enemy
-   */
-  isSquareThreatened(position, r, c, byWhite) {
-    // Simplified: check adjacent enemy pieces
-    const directions = [
-      [1, 1],
-      [1, -1],
-      [-1, 1],
-      [-1, -1],
-    ];
-
-    for (const [dr, dc] of directions) {
-      const nr = r + dr;
-      const nc = c + dc;
-
-      if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-        const piece = position.pieces[nr][nc];
-        const isWhiteP = piece === PIECE.WHITE || piece === PIECE.WHITE_KING;
-
-        if (piece !== PIECE.NONE && isWhiteP === byWhite) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+  isKing(piece) {
+    return piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING;
   }
 }

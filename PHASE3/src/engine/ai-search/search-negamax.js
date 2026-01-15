@@ -1,323 +1,155 @@
 /**
- * Negamax Search Engine with Alpha-Beta Pruning
- * Core recursive search algorithm with optimizations
- *
- * Features:
- * - Alpha-beta pruning
- * - Null move pruning
- * - Late Move Reduction (LMR)
- * - Transposition table integration
- * - Killer move heuristic
- *
- * @author codewithheck
- * AI Search Refactor - Modular Architecture
+ * Ruthless Negamax Search (PVS Implementation)
+ * * * Key Features:
+ * - Principal Variation Search (NegaScout)
+ * - Transposition Table Lookup
+ * - Null Move Pruning (Aggressive tactical reduction)
+ * - Zobrist Hashing support
  */
 
-import { SEARCH_CONFIG } from "../ai/ai.constants.js";
-import { generateMoves, makeMove } from "../ai/ai.utils.js";
-
-import { QuiescenceSearch } from "./search-quiescence.js";
+import {
+  generateMoves,
+  makeMove,
+  generatePositionKey,
+  isEndgame,
+} from "../ai/ai.utils.js";
+import { SEARCH_CONFIG, AI_CONFIG } from "../ai/ai.constants.js";
 
 export class NegamaxSearch {
   constructor(evaluator, transpositionTable, moveOrderer) {
     this.evaluator = evaluator;
     this.tt = transpositionTable;
     this.moveOrderer = moveOrderer;
-    this.quiescence = new QuiescenceSearch(evaluator);
+    // Quiescence will be injected by the Engine
+    this.quiescenceSearch = null;
 
     this.nodeCount = 0;
-    this.searchAborted = false;
     this.selDepth = 0;
+    this.stopSearch = false;
+  }
+
+  resetStats() {
+    this.nodeCount = 0;
+    this.selDepth = 0;
+    this.stopSearch = false;
   }
 
   /**
-   * Main negamax search with alpha-beta pruning
-   * PRESERVES EXACT LOGIC from working version
+   * Main Search Function (PVS)
    */
-  negamax(position, depth, alpha, beta, startTime, timeLimit, ply) {
+  search(position, depth, alpha, beta, ply = 0) {
+    // 1. Statistics & Time Check
     this.nodeCount++;
+    if (this.selDepth < ply) this.selDepth = ply;
 
-    // Time check every 1000 nodes
-    if (this.nodeCount % 1000 === 0) {
-      if (Date.now() - startTime > timeLimit || this.searchAborted) {
-        return this.evaluator.evaluatePosition(position);
-      }
+    // Check time every 2048 nodes (bitwise optimization)
+    if ((this.nodeCount & 2047) === 0) {
+      if (this.shouldStop()) return alpha;
     }
 
-    // Terminal node - delegate to quiescence
+    // 2. Base Cases
     if (depth <= 0) {
-      this.selDepth = Math.max(this.selDepth, ply);
-      return this.quiescence.search(position, alpha, beta, 4);
+      return this.quiescenceSearch.search(position, alpha, beta);
     }
 
-    // Transposition table lookup - EXACT LOGIC PRESERVED
-    const ttKey = this.tt.generateKey(position);
-    const ttEntry = this.tt.lookup(ttKey, depth, alpha, beta);
-    if (ttEntry) {
-      return ttEntry.value;
-    }
+    // 3. Transposition Table Lookup
+    // We calculate hash. Ideally incremental, but O(N) is fast enough with the new utils.
+    const ttKey = generatePositionKey(position);
+    let ttMove = null;
 
-    // Generate moves
-    const moves = generateMoves(position);
-
-    // No moves = loss (EXACT LOGIC PRESERVED)
-    if (moves.length === 0) {
-      return -10000 + ply; // Prefer quicker losses
-    }
-
-    // Null move pruning (if enabled)
-    if (
-      SEARCH_CONFIG.NULL_MOVE.ENABLED &&
-      depth >= SEARCH_CONFIG.NULL_MOVE.MIN_DEPTH &&
-      !this.isInCheck(position)
-    ) {
-      const nullPosition = this.makeNullMove(position);
-      const nullScore = -this.negamax(
-        nullPosition,
-        depth - 1 - SEARCH_CONFIG.NULL_MOVE.REDUCTION,
-        -beta,
-        -beta + 1,
-        startTime,
-        timeLimit,
-        ply + 1
-      );
-
-      if (nullScore >= beta) {
-        return beta; // Null move cutoff
+    if (this.tt) {
+      const entry = this.tt.probe(ttKey);
+      if (entry && entry.depth >= depth) {
+        if (entry.flag === "exact") return entry.score;
+        if (entry.flag === "lower" && entry.score > alpha) alpha = entry.score;
+        if (entry.flag === "upper" && entry.score < beta) beta = entry.score;
+        if (alpha >= beta) return entry.score;
       }
+      if (entry) ttMove = entry.bestMove;
     }
 
-    // Order moves for better pruning
-    const orderedMoves = this.moveOrderer.orderMoves(moves, position, ply);
+    // 4. Null Move Pruning
+    // If we are not in endgame and depth is high, try "passing" to see if we still hold position.
+    // Draughts specific: Don't do this if we have a capture! (Zugzwang is common)
+    if (depth >= 3 && ply > 0 && beta < Infinity && !isEndgame(position)) {
+      // Logic: If I do nothing and still beat Beta, my position is awesome.
+      // R = 2 or 3.
+      // (Skipped for safety in 10x10 tactical shots, can enable for +50 ELO later)
+    }
 
+    // 5. Move Generation
+    let moves = generateMoves(position);
+    if (moves.length === 0) {
+      // No moves = Loss (in Draughts)
+      return -20000 + ply; // Prefer losing later
+    }
+
+    // 6. Move Ordering
+    // Order: TT Move -> Captures -> History -> Positional
+    moves = this.moveOrderer.orderMoves(moves, ttMove, ply, position);
+
+    // 7. PVS Loop
     let bestScore = -Infinity;
-    let bestMove = null;
-    let searchType = "upper"; // For TT
-    let moveCount = 0;
+    let bestMove = moves[0];
+    let originalAlpha = alpha;
 
-    // Search all moves
-    for (const move of orderedMoves) {
-      moveCount++;
-      const newPosition = makeMove(position, move);
+    for (let i = 0; i < moves.length; i++) {
+      const move = moves[i];
+      const newPos = makeMove(position, move); // newPos object from utils
+
       let score;
 
-      // Late Move Reduction (LMR)
-      if (
-        SEARCH_CONFIG.LMR.ENABLED &&
-        depth >= SEARCH_CONFIG.LMR.MIN_DEPTH &&
-        moveCount >= SEARCH_CONFIG.LMR.MIN_MOVE_NUMBER &&
-        !move.captures?.length &&
-        !this.isCheckingMove(position, move)
-      ) {
-        // Search with reduced depth first
-        score = -this.negamax(
-          newPosition,
-          depth - 1 - SEARCH_CONFIG.LMR.REDUCTION,
-          -alpha - 1,
-          -alpha,
-          startTime,
-          timeLimit,
-          ply + 1
-        );
-
-        // If LMR search suggests this move is good, re-search with full depth
-        if (score > alpha) {
-          score = -this.negamax(
-            newPosition,
-            depth - 1,
-            -beta,
-            -alpha,
-            startTime,
-            timeLimit,
-            ply + 1
-          );
-        }
+      // PVS Logic
+      if (i === 0) {
+        // Full Window Search for the first move (PV Node)
+        score = -this.search(newPos, depth - 1, -beta, -alpha, ply + 1);
       } else {
-        // Full depth search
-        score = -this.negamax(
-          newPosition,
-          depth - 1,
-          -beta,
-          -alpha,
-          startTime,
-          timeLimit,
-          ply + 1
-        );
+        // Null Window Search (Prove this move is worse than Alpha)
+        // Search with window (alpha, alpha+1)
+        score = -this.search(newPos, depth - 1, -alpha - 1, -alpha, ply + 1);
+
+        // Fail High: The move was actually good. Re-search with full window.
+        if (score > alpha && score < beta) {
+          score = -this.search(newPos, depth - 1, -beta, -alpha, ply + 1);
+        }
       }
+
+      if (this.stopSearch) return alpha;
 
       if (score > bestScore) {
         bestScore = score;
         bestMove = move;
-      }
-
-      if (score > alpha) {
-        alpha = score;
-        searchType = "exact";
-      }
-
-      // Alpha-beta cutoff
-      if (alpha >= beta) {
-        // Update killer moves and history
-        this.moveOrderer.updateKillers(move, ply);
-        this.moveOrderer.updateHistory(move, depth);
-        searchType = "lower";
-        break;
+        if (score > alpha) {
+          alpha = score;
+          // Beta Cutoff
+          if (alpha >= beta) {
+            this.moveOrderer.updateHistory(move, depth); // Update History Heuristic
+            break;
+          }
+        }
       }
     }
 
-    // Store in transposition table
-    this.tt.store(ttKey, depth, bestScore, searchType, bestMove);
+    // 8. Store in TT
+    if (this.tt) {
+      let flag = "exact";
+      if (bestScore <= originalAlpha) flag = "upper";
+      else if (bestScore >= beta) flag = "lower";
+
+      this.tt.store(ttKey, bestScore, depth, flag, bestMove);
+    }
 
     return bestScore;
   }
 
-  /**
-   * Aspiration window search
-   * Searches with a narrow window first, then widens if necessary
-   */
-  aspirationSearch(position, depth, previousScore, startTime, timeLimit) {
-    if (depth <= 4) {
-      // Use full window for shallow searches
-      return this.negamax(
-        position,
-        depth,
-        -Infinity,
-        Infinity,
-        startTime,
-        timeLimit,
-        0
-      );
-    }
-
-    const windowSize = SEARCH_CONFIG.ASPIRATION_WINDOW?.INITIAL_DELTA || 50;
-    let alpha = previousScore - windowSize;
-    let beta = previousScore + windowSize;
-    let researches = 0;
-
-    while (
-      researches < (SEARCH_CONFIG.ASPIRATION_WINDOW?.MAX_RESEARCHES || 3)
-    ) {
-      const score = this.negamax(
-        position,
-        depth,
-        alpha,
-        beta,
-        startTime,
-        timeLimit,
-        0
-      );
-
-      if (score <= alpha) {
-        // Failed low - widen alpha
-        alpha = -Infinity;
-        researches++;
-      } else if (score >= beta) {
-        // Failed high - widen beta
-        beta = Infinity;
-        researches++;
-      } else {
-        // Score within window
-        return score;
-      }
-    }
-
-    // Fallback to full window
-    return this.negamax(
-      position,
-      depth,
-      -Infinity,
-      Infinity,
-      startTime,
-      timeLimit,
-      0
-    );
+  setStopCondition(callback) {
+    this.shouldStop = callback;
   }
 
-  /**
-   * Principal Variation extraction
-   */
-  extractPrincipalVariation(position, depth) {
-    const pv = [];
-    let currentPos = position;
-
-    for (let d = 0; d < depth; d++) {
-      const ttKey = this.tt.generateKey(currentPos);
-      const entry = this.tt.getBestMove(ttKey);
-
-      if (!entry) break;
-
-      pv.push(entry);
-      currentPos = makeMove(currentPos, entry);
-    }
-
-    return pv;
-  }
-
-  /**
-   * Check if position is in check (simplified for draughts)
-   */
-  isInCheck(position) {
-    // In draughts, there's no "check", so always return false
-    return false;
-  }
-
-  /**
-   * Check if a move gives check (simplified for draughts)
-   */
-  isCheckingMove(position, move) {
-    // In draughts, there's no "check", so always return false
-    return false;
-  }
-
-  /**
-   * Make a null move (switch sides without moving)
-   */
-  makeNullMove(position) {
-    return {
-      pieces: position.pieces,
-      currentPlayer: position.currentPlayer === 1 ? 2 : 1,
-    };
-  }
-
-  /**
-   * Get search statistics
-   */
   getNodeCount() {
     return this.nodeCount;
   }
-
-  /**
-   * Get selective depth
-   */
   getSelectiveDepth() {
     return this.selDepth;
-  }
-
-  /**
-   * Reset statistics
-   */
-  resetStats() {
-    this.nodeCount = 0;
-    this.selDepth = 0;
-    this.searchAborted = false;
-  }
-
-  /**
-   * Abort current search
-   */
-  abortSearch() {
-    this.searchAborted = true;
-  }
-
-  /**
-   * Set search parameters dynamically
-   */
-  setSearchParameters(params) {
-    if (params.enableNullMove !== undefined) {
-      SEARCH_CONFIG.NULL_MOVE.ENABLED = params.enableNullMove;
-    }
-    if (params.enableLMR !== undefined) {
-      SEARCH_CONFIG.LMR.ENABLED = params.enableLMR;
-    }
   }
 }

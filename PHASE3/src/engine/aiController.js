@@ -1,173 +1,152 @@
 /**
- * AI Controller - Main Thread Interface for Grandmaster AI
- * Manages Web Worker for non-blocking AI computation
- * @author codewithheck
- * Grandmaster Edition
+ * Ruthless AI Controller
+ * The Bridge between the UI and the High-Performance Worker.
+ * * * Features:
+ * - Robust Worker Instantiation (Module-based)
+ * - Request/Response correlation (Promises)
+ * - Stat forwarding (Depth, Nodes, NPS)
  */
 
 export class AIController {
-    constructor() {
-        this.worker = null;
-        this.pendingRequests = new Map();
-        this.requestId = 0;
-        this.initialized = false;
-        this.initPromise = null;
+  constructor() {
+    this.worker = null;
+    this.requestId = 0;
+    this.pending = new Map();
+    this.ready = false;
+
+    // Singleton initialization promise
+    this.bootPromise = null;
+  }
+
+  /**
+   * Boot the Engine
+   */
+  async init() {
+    if (this.bootPromise) return this.bootPromise;
+
+    this.bootPromise = new Promise((resolve, reject) => {
+      try {
+        // Modern Module Worker Import
+        this.worker = new Worker(
+          new URL("./src/engine/ai/ai-worker.js", import.meta.url),
+          { type: "module" }
+        );
+
+        this.worker.onerror = (err) => {
+          console.error("🔥 AI Worker Crashed:", err);
+          reject(err);
+        };
+
+        this.worker.onmessage = (e) => this._handleMessage(e, resolve);
+
+        // Ping the worker to start
+        this._send("initialize");
+      } catch (e) {
+        console.error("Failed to spawn AI Worker:", e);
+        reject(e);
+      }
+    });
+
+    return this.bootPromise;
+  }
+
+  /**
+   * Request a Move
+   * @param {Object} position - The current board state { pieces, currentPlayer }
+   * @returns {Promise<Object>} - { move, stats }
+   */
+  async getBestMove(position) {
+    if (!this.ready) await this.init();
+
+    // Strip UI-specific data from position (Optimization)
+    const cleanPosition = {
+      pieces: position.pieces,
+      currentPlayer: position.currentPlayer,
+    };
+
+    return this._sendRequest("getMove", { position: cleanPosition });
+  }
+
+  /**
+   * Set Difficulty (1-6)
+   */
+  setDifficulty(level) {
+    // Fire and forget (no await needed usually, but we track it internally)
+    this._send("setDifficulty", { level });
+  }
+
+  /**
+   * Reset/New Game
+   */
+  newGame() {
+    this._send("newGame");
+  }
+
+  /**
+   * Get Engine Diagnostics (Memory Usage, etc)
+   */
+  getStats() {
+    this._send("getStatus");
+  }
+
+  terminate() {
+    if (this.worker) this.worker.terminate();
+    this.worker = null;
+    this.ready = false;
+    this.bootPromise = null;
+  }
+
+  // ============================================================
+  // INTERNAL MESSAGING
+  // ============================================================
+
+  _send(type, data = {}) {
+    if (this.worker) {
+      this.worker.postMessage({ type, data, requestId: 0 });
+    }
+  }
+
+  _sendRequest(type, data = {}) {
+    return new Promise((resolve, reject) => {
+      const id = ++this.requestId;
+      this.pending.set(id, { resolve, reject });
+      this.worker.postMessage({ type, data, requestId: id });
+    });
+  }
+
+  _handleMessage(e, initResolve) {
+    const { type, data, requestId, error } = e.data;
+
+    // 1. Initialization Handshake
+    if (type === "initialized") {
+      console.log(`✅ ${data.version} Online.`);
+      this.ready = true;
+      if (initResolve) initResolve();
+      return;
     }
 
-    /**
-     * Initialize the AI worker and wait for it to be ready
-     * @returns {Promise<void>}
-     */
-    async initialize() {
-        if (this.initPromise) return this.initPromise;
-        
-        this.initPromise = new Promise((resolve, reject) => {
-            try {
-                // Create the worker
-                this.worker = new Worker('./src/engine/ai.worker.js', { type: 'module' });
-                
-                // Set up message handler
-                this.worker.onmessage = (event) => {
-                    const { type, requestId, data, error } = event.data;
-                    
-                    if (type === 'initialized') {
-                        this.initialized = true;
-                        console.log('AI Worker initialized successfully');
-                        resolve();
-                    } else if (type === 'moveResult' && this.pendingRequests.has(requestId)) {
-                        const { resolve, reject } = this.pendingRequests.get(requestId);
-                        this.pendingRequests.delete(requestId);
-                        
-                        if (error) {
-                            reject(new Error(error));
-                        } else {
-                            resolve(data.move);
-                        }
-                    } else if (type === 'evaluation') {
-                        // Handle evaluation updates for UI display
-                        if (window.gameController && window.gameController.ui) {
-                            window.gameController.ui.updateAnalysis(data);
-                        }
-                    } else if (type === 'log') {
-                        console.log('[AI Worker]:', data.message);
-                    }
-                };
-                
-                // Set up error handler
-                this.worker.onerror = (error) => {
-                    console.error('AI Worker error:', error);
-                    this.initialized = false;
-                    reject(error);
-                };
-                
-                // Initialize the worker
-                this.worker.postMessage({ type: 'initialize' });
-                
-            } catch (error) {
-                console.error('Failed to create AI Worker:', error);
-                reject(error);
-            }
-        });
-        
-        return this.initPromise;
+    // 2. Request/Response Handling
+    if (requestId && this.pending.has(requestId)) {
+      const { resolve, reject } = this.pending.get(requestId);
+      this.pending.delete(requestId);
+
+      if (error) {
+        console.error("AI Error:", error);
+        reject(new Error(error));
+      } else {
+        // For 'moveResult', we resolve with the whole data object
+        // containing { move, stats } so the UI can show nodes/depth.
+        resolve(data);
+      }
+      return;
     }
 
-    /**
-     * Set the AI difficulty level
-     * @param {number} level - Difficulty level (1-6)
-     */
-    async setDifficulty(level) {
-        if (!this.initialized) {
-            await this.initialize();
-        }
-        
-        this.worker.postMessage({
-            type: 'setDifficulty',
-            data: { level }
-        });
+    // 3. One-way Updates (Logs, Status)
+    if (type === "statusResult") {
+      console.log("📊 Engine Stats:", data);
     }
-
-    /**
-     * Get the best move for the current position
-     * @param {Object} position - Current game position
-     * @param {string[]} moveHistoryNotations - Move history in notation format
-     * @returns {Promise<Object>} Best move
-     */
-    async getMove(position, moveHistoryNotations) {
-        if (!this.initialized) {
-            await this.initialize();
-        }
-        
-        const requestId = ++this.requestId;
-        
-        return new Promise((resolve, reject) => {
-            // Store the promise callbacks
-            this.pendingRequests.set(requestId, { resolve, reject });
-            
-            // Set a timeout
-            const timeout = setTimeout(() => {
-                if (this.pendingRequests.has(requestId)) {
-                    this.pendingRequests.delete(requestId);
-                    reject(new Error('AI move calculation timed out'));
-                }
-            }, 30000); // 30 second timeout
-            
-            // Send the request to the worker
-            this.worker.postMessage({
-                type: 'getMove',
-                requestId,
-                data: {
-                    position: {
-                        pieces: position.pieces,
-                        currentPlayer: position.currentPlayer
-                    },
-                    moveHistoryNotations
-                }
-            });
-            
-            // Clear timeout on resolution
-            this.pendingRequests.get(requestId).clearTimeout = () => clearTimeout(timeout);
-        });
-    }
-
-    /**
-     * Abort the current search
-     */
-    abortSearch() {
-        if (this.worker) {
-            this.worker.postMessage({ type: 'abort' });
-            
-            // Reject all pending requests
-            this.pendingRequests.forEach(({ reject, clearTimeout }) => {
-                if (clearTimeout) clearTimeout();
-                reject(new Error('Search aborted'));
-            });
-            this.pendingRequests.clear();
-        }
-    }
-
-    /**
-     * Terminate the worker and clean up resources
-     */
-    terminate() {
-        if (this.worker) {
-            this.abortSearch();
-            this.worker.terminate();
-            this.worker = null;
-            this.initialized = false;
-            this.initPromise = null;
-        }
-    }
-
-    /**
-     * Get the last evaluation data (for display purposes)
-     * @returns {Object|null} Last evaluation
-     */
-    getLastEvaluation() {
-        // This will be updated via the 'evaluation' message type
-        return null; // The UI will be updated directly via messages
-    }
+  }
 }
 
-// Export a singleton instance
+// Export Singleton
 export const AI = new AIController();

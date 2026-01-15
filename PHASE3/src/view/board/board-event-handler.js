@@ -34,6 +34,15 @@ export class BoardEventHandler {
     container.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     container.addEventListener("mouseup", (e) => this.handleMouseUp(e));
     container.addEventListener("mouseleave", (e) => this.handleMouseLeave(e));
+    
+    // Prevent context menu during edit mode to allow right-click placement
+    container.addEventListener("contextmenu", (e) => {
+      if (this.boardRenderer.isInEditMode()) {
+        e.preventDefault();
+        // Trigger click logic for right-click as well
+        this.handleClick(e);
+      }
+    });
   }
 
   /**
@@ -46,9 +55,9 @@ export class BoardEventHandler {
     const row = parseInt(square.dataset.row);
     const col = parseInt(square.dataset.col);
 
-    // If in edit mode, emit edit event and return
+    // If in edit mode, emit edit event with button info and return
     if (this.boardRenderer.isInEditMode()) {
-      this.emit("editSquare", { row, col });
+      this.emit("editSquare", { row, col, button: event.button });
       return;
     }
 

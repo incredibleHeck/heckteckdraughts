@@ -1,251 +1,109 @@
 /**
- * Iterative Deepening Search Controller
- * Orchestrates search at increasing depths with time management
- *
- * Features:
- * - Progressive depth search
- * - Time-aware cutoffs
- * - Best move preservation
- * - Early termination for winning positions
- * - Principal variation tracking
- *
- * @author codewithheck
- * AI Search Refactor - Modular Architecture
+ * Iterative Deepening (Aspiration Windows)
+ * * * Key Features:
+ * - Aspiration Windows: Narrows search window based on previous depth score.
+ * - Time Management: Strict checking.
  */
 
-import { generateMoves, makeMove } from "../ai/ai.utils.js";
-import { SEARCH_CONFIG } from "../ai/ai.constants.js";
+import { generateMoves } from "../ai/ai.utils.js";
 
 export class IterativeDeepening {
   constructor(negamaxSearch, moveOrderer) {
     this.negamaxSearch = negamaxSearch;
     this.moveOrderer = moveOrderer;
-    this.searchAborted = false;
+    this.stopSearch = false;
   }
 
-  /**
-   * Main search interface - Iterative deepening
-   * PRESERVES EXACT LOGIC from working version
-   */
-  async search(position, maxDepth, timeLimit, startTime) {
-    let bestMove = null;
-    let bestScore = -Infinity;
-
-    const moves = generateMoves(position);
-    if (moves.length === 0) return { move: null, score: 0 };
-    if (moves.length === 1) return { move: moves[0], score: 0 };
-
-    // Iterative deepening loop - EXACT LOGIC PRESERVED
-    for (let depth = 1; depth <= maxDepth; depth++) {
-      const timeUsed = Date.now() - startTime;
-      if (
-        timeUsed >
-        timeLimit * SEARCH_CONFIG.TIME_MANAGEMENT.EARLY_EXIT_THRESHOLD
-      ) {
-        break;
-      }
-
-      const result = await this.searchRoot(
-        position,
-        depth,
-        startTime,
-        timeLimit
-      );
-
-      if (result.timeout || this.searchAborted) {
-        break;
-      }
-
-      if (result.move) {
-        bestMove = result.move;
-        bestScore = result.score;
-
-        // Send progress update
-        if (typeof postMessage === "function") {
-          postMessage({
-            type: "evaluation",
-            data: {
-              score: bestScore,
-              depth: depth,
-              nodes: this.negamaxSearch.getNodeCount(),
-              time: Date.now() - startTime,
-              pv: result.principalVariation || [],
-            },
-          });
-        }
-
-        // Early exit for winning positions
-        if (Math.abs(bestScore) > 5000) {
-          console.log(`Winning position found at depth ${depth}!`);
-          break;
-        }
-      }
-    }
-
-    return {
-      move: bestMove || moves[0],
-      score: bestScore,
-      nodes: this.negamaxSearch.getNodeCount(),
-      time: Date.now() - startTime,
-    };
+  abortSearch() {
+    this.stopSearch = true;
+    this.negamaxSearch.stopSearch = true;
   }
 
-  /**
-   * Root search (first level of search tree)
-   * PRESERVES EXACT LOGIC from working version
-   */
-  async searchRoot(position, depth, startTime, timeLimit) {
-    let alpha = -Infinity;
-    let beta = Infinity;
-    let bestMove = null;
-    let bestScore = -Infinity;
-    let principalVariation = [];
-
-    const moves = this.moveOrderer.orderMoves(
-      generateMoves(position),
-      position,
-      0
-    );
-
-    for (const move of moves) {
-      // Time check
-      if (Date.now() - startTime > timeLimit || this.searchAborted) {
-        return {
-          move: bestMove || moves[0],
-          score: bestScore,
-          timeout: true,
-        };
-      }
-
-      const newPosition = makeMove(position, move);
-      const score = -this.negamaxSearch.negamax(
-        newPosition,
-        depth - 1,
-        -beta,
-        -alpha,
-        startTime,
-        timeLimit,
-        1
-      );
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
-        principalVariation = [move]; // Start of PV
-      }
-
-      alpha = Math.max(alpha, score);
-
-      if (alpha >= beta) {
-        // Alpha-beta cutoff
-        this.moveOrderer.updateKillers(move, 0);
-        break;
-      }
-    }
-
-    return {
-      move: bestMove || moves[0],
-      score: bestScore,
-      timeout: false,
-      principalVariation,
-    };
-  }
-
-  /**
-   * Advanced search with multiple techniques
-   */
-  async advancedSearch(position, depth, timeLimit, startTime) {
-    // Reset statistics
+  reset() {
+    this.stopSearch = false;
     this.negamaxSearch.resetStats();
-    let searchTime = 0;
+  }
+
+  async search(position, maxDepth, timeLimit, startTime) {
+    this.reset();
+
+    // Time Management Hook
+    this.negamaxSearch.setStopCondition(() => {
+      if (this.stopSearch) return true;
+      return Date.now() - startTime > timeLimit;
+    });
 
     let bestMove = null;
-    let bestScore = -Infinity;
+    let score = 0;
 
-    // Try iterative deepening with aspiration windows
-    for (let d = 1; d <= depth; d++) {
-      const timeUsed = Date.now() - startTime;
-      if (timeUsed > timeLimit * 0.8) break;
+    // Initial Move Gen check
+    const initialMoves = generateMoves(position);
+    if (initialMoves.length === 0) return { move: null, score: -20000 };
+    if (initialMoves.length === 1) return { move: initialMoves[0], score: 0 }; // Forced move
 
-      let score;
-      if (d <= 4 || bestScore === -Infinity) {
-        // Full window search for shallow depths or first iteration
-        score = this.negamaxSearch.negamax(
+    // --- ITERATIVE DEEPENING LOOP ---
+    for (let depth = 1; depth <= maxDepth; depth++) {
+      // Aspiration Window Logic
+      // At depth 1, window is infinite.
+      // At depth > 1, window is [score - window, score + window]
+      let alpha = -Infinity;
+      let beta = Infinity;
+      const windowSize = 50;
+
+      if (depth > 2) {
+        alpha = score - windowSize;
+        beta = score + windowSize;
+      }
+
+      let currentScore = 0;
+
+      // Search
+      currentScore = this.negamaxSearch.search(position, depth, alpha, beta, 0);
+
+      // Fail Low/High Handling (Re-search)
+      if (currentScore <= alpha || currentScore >= beta) {
+        // Aspiration fail - Search full window
+        // console.log(`Aspiration fail at depth ${depth}, re-searching...`);
+        currentScore = this.negamaxSearch.search(
           position,
-          d,
+          depth,
           -Infinity,
           Infinity,
-          startTime,
-          timeLimit,
           0
         );
-      } else {
-        // Aspiration window search
-        score = this.negamaxSearch.aspirationSearch(
-          position,
-          d,
-          bestScore,
-          startTime,
-          timeLimit
-        );
       }
 
-      if (this.searchAborted) break;
+      if (Date.now() - startTime > timeLimit || this.stopSearch) {
+        // If we timed out during the search, discard this depth's result
+        // unless we found no move yet.
+        if (bestMove) break;
+      }
 
-      // Extract best move from TT
+      score = currentScore;
+
+      // Extract Best Move from TT for result
       const ttKey = this.negamaxSearch.tt.generateKey(position);
-      const ttEntry = this.negamaxSearch.tt.getBestMove(ttKey);
-      if (ttEntry) {
-        bestMove = ttEntry;
-        bestScore = score;
+      const entry = this.negamaxSearch.tt.probe(ttKey);
+
+      if (entry && entry.bestMove) {
+        bestMove = entry.bestMove;
+        // console.log(`Depth ${depth} complete. Score: ${score}. Move: ${bestMove.from.row},${bestMove.from.col} -> ${bestMove.to.row},${bestMove.to.col}`);
+      } else {
+        // Fallback if TT missed (rare)
+        bestMove = initialMoves[0];
       }
 
-      // Early termination for mate scores
-      if (Math.abs(score) > 9000) {
-        console.log(`Mate found at depth ${d}`);
-        break;
-      }
+      // Mate detection
+      if (Math.abs(score) > 19000) break;
     }
-
-    searchTime = Date.now() - startTime;
 
     return {
       move: bestMove,
-      score: bestScore,
-      stats: this.getSearchStats(),
-      principalVariation: this.negamaxSearch.extractPrincipalVariation(
-        position,
-        Math.min(depth, 10)
-      ),
+      score: score,
+      stats: {
+        nodes: this.negamaxSearch.getNodeCount(),
+        depth: maxDepth,
+      },
     };
-  }
-
-  /**
-   * Get combined search statistics
-   */
-  getSearchStats() {
-    return {
-      nodes: this.negamaxSearch.getNodeCount(),
-      selectiveDepth: this.negamaxSearch.getSelectiveDepth(),
-      transpositionTable: this.negamaxSearch.tt.getStats(),
-      nodesPerSecond:
-        this.negamaxSearch.getNodeCount() / Math.max(1, this.searchTime / 1000),
-    };
-  }
-
-  /**
-   * Abort current search
-   */
-  abortSearch() {
-    this.searchAborted = true;
-    this.negamaxSearch.abortSearch();
-  }
-
-  /**
-   * Reset search
-   */
-  reset() {
-    this.searchAborted = false;
-    this.negamaxSearch.resetStats();
   }
 }

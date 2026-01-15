@@ -49,7 +49,7 @@ export class AnalysisPanel {
    * @returns {string} Formatted score
    */
   formatScore(score) {
-    if (Math.abs(score) > 10000) {
+    if (Math.abs(score) > 100000) {
       return score > 0 ? "+∞" : "-∞"; // Checkmate
     }
     return (score / 100).toFixed(1);
