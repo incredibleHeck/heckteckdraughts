@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Modernization - Initialize React + TypeScript + Vite Scaffold**
+- [~] **Track: Modernization - Initialize React + TypeScript + Vite Scaffold**
   *Link: [./tracks/modernization_20260115/](./tracks/modernization_20260115/)*

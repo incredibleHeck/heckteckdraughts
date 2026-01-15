@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="codewithheck" />
+    <title>Hectic - International Draughts 10x10</title>
+
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23ffc857'/><circle cx='50' cy='50' r='25' fill='%23333'/></svg>"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+
+    <script src="vendors/html2canvas.min.js"></script>
+
+    <style>
+      /* Instant Loading Shell */
+      body {
+        background: #1c1e22;
+        color: #e4e6eb;
+        margin: 0;
+        overflow: hidden;
+      }
+      .loading-screen {
+        position: fixed;
+        inset: 0;
+        background: #1c1e22;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        transition: opacity 0.6s ease;
+      }
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 200, 87, 0.1);
+        border-top-color: #ffc857;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-screen" class="loading-screen">
+      <div style="text-align: center">
+        <div class="loading-spinner"></div>
+        <h2 style="color: #ffc857; margin-top: 20px">Hectic Draughts</h2>
+        <p id="loading-status" style="color: #b0b3b8">Initializing Engine...</p>
+      </div>
+    </div>
+
+    <nav class="top-nav">
+      <div class="nav-container">
+        <div class="nav-group">
+          <div class="nav-control">
+            <label>AI Level:</label>
+            <select id="difficulty-level" class="nav-select">
+              <option value="1">Beginner</option>
+              <option value="6" selected>Grandmaster (Ruthless)</option>
+            </select>
+          </div>
+          <div class="nav-control">
+            <label>Mode:</label>
+            <select id="game-mode" class="nav-select">
+              <option value="pva" selected>Vs. AI</option>
+              <option value="pvp">Local PvP</option>
+            </select>
+          </div>
+          <div class="nav-control">
+            <label class="nav-checkbox">
+              <input type="checkbox" id="max-capture-rule" checked />
+              <span>Majority Rule</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="nav-group">
+          <button id="edit-mode" class="nav-tab">✏️ Edit</button>
+          <button id="import-fen" class="nav-tab">📥 FEN</button>
+          <button id="save-png" class="nav-tab">📸 Screenshot</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="players-bar">
+      <div class="player-card white-player">
+        <div class="player-name">White</div>
+        <div class="graveyard" id="white-graveyard"></div>
+        <div class="player-stats">
+          <span class="timer" id="white-timer">05:00</span>
+        </div>
+      </div>
+
+      <div class="vs-separator">VS</div>
+
+      <div class="player-card black-player">
+        <div class="player-name">Black</div>
+        <div class="graveyard" id="black-graveyard"></div>
+        <div class="player-stats">
+          <span class="timer" id="black-timer">05:00</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-container">
+      <aside class="left-panel">
+        <div class="control-section analysis" id="analysis-panel">
+          <h3>Engine Analysis</h3>
+          <div class="evaluation">
+            <span>Score:</span> <span id="evaluation-score">0.0</span>
+          </div>
+          <div class="evaluation">
+            <span>Best:</span> <span id="best-move">--</span>
+          </div>
+          <div class="evaluation">
+            <span>Depth:</span> <span id="search-depth">0</span>
+          </div>
+          <div class="evaluation">
+            <span>Nodes:</span> <span id="search-nodes">0</span>
+          </div>
+          <div id="material-delta">Even</div>
+        </div>
+
+        <div class="control-section move-log">
+          <h3>Move History</h3>
+          <div id="move-history"></div>
+        </div>
+      </aside>
+
+      <main class="board-panel">
+        <div class="game-board-container">
+          <div class="evaluation-gauge" id="evaluation-gauge-container">
+            <div class="evaluation-gauge-fill" id="evaluation-gauge-fill"></div>
+          </div>
+
+          <div id="game-board" class="game-board"></div>
+
+          <div class="game-controls">
+            <button id="first-move" class="nav-button">|&laquo;</button>
+            <button id="undo" class="nav-button">&larr;</button>
+            <button id="redo" class="nav-button">&rarr;</button>
+            <button id="last-move" class="nav-button">&raquo;|</button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="edit-panel" class="edit-panel" style="display: none">
+      <div class="edit-controls">
+        <h3>Position Editor</h3>
+        <div class="piece-options">
+          <button class="piece-btn active" data-piece="1">Man (W)</button>
+          <button class="piece-btn" data-piece="3">King (W)</button>
+          <button class="piece-btn" data-piece="2">Man (B)</button>
+          <button class="piece-btn" data-piece="4">King (B)</button>
+          <button class="piece-btn" data-piece="0">Eraser</button>
+        </div>
+        <div class="edit-actions">
+          <button id="reset-position" class="action-btn">Reset</button>
+          <button id="clear-board" class="action-btn">Empty</button>
+          <button id="start-game" class="action-btn primary">
+            Save & Play
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+    <script>
+      // Critical UI Handlers
+      window.hideLoadingScreen = () => {
+        const screen = document.getElementById("loading-screen");
+        screen.style.opacity = "0";
+        setTimeout(() => (screen.style.display = "none"), 600);
+      };
+    </script>
+  </body>
+</html>

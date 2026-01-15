@@ -1,12 +1,12 @@
 # Implementation Plan - Modernization - Initialize React + TypeScript + Vite Scaffold
 
 ## Phase 1: Environment & Scaffold
-- [ ] Task: Initialize Vite project with React and TypeScript templates.
+- [x] Task: Initialize Vite project with React and TypeScript templates.
     - [ ] Initialize project using `npm create vite@latest . -- --template react-ts`.
     - [ ] Install dependencies (`npm install`).
     - [ ] Configure `tsconfig.json` for strict mode and path aliases.
     - [ ] Configure `vite.config.ts`.
-- [ ] Task: Port Assets and Styles.
+- [x] Task: Port Assets and Styles.
     - [ ] Copy `assets/images/` to `src/assets/images/` or `public/images/`.
     - [ ] specific: Copy `css/style.css` content to `src/index.css` and refactor for modern React (e.g., :root variables).
     - [ ] Install and configure `classnames` or `clsx` for cleaner class management (optional but recommended).
