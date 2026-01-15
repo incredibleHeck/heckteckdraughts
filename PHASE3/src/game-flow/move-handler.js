@@ -63,6 +63,8 @@ export class MoveHandler {
       if (!attemptedMove) {
         this.notification.warning("Illegal move", { duration: 1500 });
         this.board.clearHighlights();
+        // Restore pieces to correct positions
+        this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
         return;
       }
 

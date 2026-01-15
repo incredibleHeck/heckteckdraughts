@@ -92,6 +92,40 @@ export class UI {
     this.historyPanel.on("jumpToMove", (index) =>
       this.emit("jumpToMove", index)
     );
+
+    // Edit panel internal buttons
+    const editPanelButtons = {
+      "clear-board": "clearBoard",
+      "reset-position": "resetPosition",
+      "start-game": "startGame",
+    };
+
+    Object.entries(editPanelButtons).forEach(([id, event]) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("click", () => this.emit(event));
+      }
+    });
+
+    // Piece selection in edit mode
+    const pieceBtns = document.querySelectorAll(".piece-btn");
+    pieceBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        pieceBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        this.emit("editPieceSelected", parseInt(btn.dataset.piece, 10));
+      });
+    });
+  }
+
+  /**
+   * Toggle edit panel visibility
+   */
+  toggleEditPanel(show) {
+    const panel = document.getElementById("edit-panel");
+    if (panel) {
+      panel.style.display = show ? "block" : "none";
+    }
   }
 
   updateMoveHistory(history, currentIndex = -1) {

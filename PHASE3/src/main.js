@@ -120,12 +120,18 @@ class GameController {
         
         // UI events - Edit mode
         this.ui.on('editModeToggle', (enabled) => {
-            if (enabled) {
-                this.editModeHandler.toggleEditMode();
-            } else {
-                this.editModeHandler.toggleEditMode();
-            }
+            this.editModeHandler.toggleEditMode();
         });
+
+        this.ui.on('clearBoard', () => this.editModeHandler.clearBoard());
+        this.ui.on('resetPosition', () => this.editModeHandler.setupInitialPosition());
+        this.ui.on('startGame', () => {
+            this.editModeHandler.toggleEditMode();
+            const editBtn = document.getElementById('edit-mode');
+            if (editBtn) editBtn.classList.remove('active');
+            this.updateView();
+        });
+        this.ui.on('editPieceSelected', (piece) => this.editModeHandler.setSelectedPiece(piece));
         
         // UI events - History navigation
         this.ui.on('undo', () => this.historyHandler.undo());

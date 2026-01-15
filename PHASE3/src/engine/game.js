@@ -298,7 +298,7 @@ export class Game {
 
     if (isKing) {
       // Flying king: move in any direction any distance
-      const dirs = Object.values(DIRECTIONS);
+      const dirs = DIRECTIONS.KING_MOVES;
       for (const dir of dirs) {
         let nr = r + dir.dy,
           nc = c + dir.dx;
@@ -614,9 +614,8 @@ export class Game {
     if (!move || !move.from || !move.to) return "--";
     const from = SQUARE_NUMBERS[move.from.row * BOARD_SIZE + move.from.col];
     const to = SQUARE_NUMBERS[move.to.row * BOARD_SIZE + move.to.col];
-    return move.captures && move.captures.length > 0
-      ? `${from}x${to}`
-      : `${from}-${to}`;
+    const isCapture = (move.captures && move.captures.length > 0) || this.moveValidator.isCapture(move);
+    return isCapture ? `${from}x${to}` : `${from}-${to}`;
   }
 
   setMaxCaptureRule(enabled) {

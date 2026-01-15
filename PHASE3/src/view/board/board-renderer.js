@@ -26,6 +26,30 @@ export class BoardRenderer {
     this.playingAreaSize = this.totalBoardSize - this.borderSize * 2;
     this.squareSize = this.playingAreaSize / BOARD_SIZE;
     this.showSquareNumbers = true;
+    this.editMode = false;
+  }
+
+  /**
+   * Enable edit mode
+   */
+  enableEditMode() {
+    this.editMode = true;
+    this.container.classList.add("edit-mode");
+  }
+
+  /**
+   * Disable edit mode
+   */
+  disableEditMode() {
+    this.editMode = false;
+    this.container.classList.remove("edit-mode");
+  }
+
+  /**
+   * Check if in edit mode
+   */
+  isInEditMode() {
+    return this.editMode;
   }
 
   /**

@@ -142,7 +142,7 @@ export function findCaptureSequences(sequences, pieces, currentPos, path, captur
 
     for (const dir of dirs) {
         if (isKing) {
-            // Flying king capture logic - EXACT from working version
+            // Flying king capture logic
             let checkRow = currentPos.row + dir.dy;
             let checkCol = currentPos.col + dir.dx;
             let enemyPos = null;
@@ -178,7 +178,7 @@ export function findCaptureSequences(sequences, pieces, currentPos, path, captur
                     const newVisitedPositions = new Set(visitedPositions);
                     findCaptureSequences(sequences, newPieces, 
                         { row: landRow, col: landCol }, 
-                        [...path, currentPos], 
+                        path.length === 0 ? [currentPos] : path, 
                         [...capturedSoFar, enemyPos],
                         newVisitedPositions,
                         recursionDepth + 1);
@@ -188,7 +188,7 @@ export function findCaptureSequences(sequences, pieces, currentPos, path, captur
                 }
             }
         } else {
-            // Regular piece capture logic - EXACT from working version
+            // Regular piece capture logic
             const jumpOverPos = { row: currentPos.row + dir.dy, col: currentPos.col + dir.dx };
             const landPos = { row: currentPos.row + 2 * dir.dy, col: currentPos.col + 2 * dir.dx };
 
@@ -208,7 +208,7 @@ export function findCaptureSequences(sequences, pieces, currentPos, path, captur
 
                     const newVisitedPositions = new Set(visitedPositions);
                     findCaptureSequences(sequences, newPieces, landPos, 
-                        [...path, currentPos], [...capturedSoFar, jumpOverPos],
+                        path.length === 0 ? [currentPos] : path, [...capturedSoFar, jumpOverPos],
                         newVisitedPositions, recursionDepth + 1);
                 }
             }

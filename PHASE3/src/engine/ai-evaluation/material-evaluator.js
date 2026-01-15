@@ -17,7 +17,7 @@ export class MaterialEvaluator {
   constructor(materialWeights) {
     this.materialWeights = materialWeights || {
       MAN: 100,
-      KING: 350,
+      KING: 400,
     };
   }
 

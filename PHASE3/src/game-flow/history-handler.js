@@ -19,7 +19,7 @@ export class HistoryHandler {
    */
   undo() {
     this.handleHistoryChange(() => {
-      const moved = this.history.previousMove();
+      const moved = this.history.undo();
       if (!moved) {
         this.notification.warning("Already at the beginning", {
           duration: 1500,
@@ -35,7 +35,7 @@ export class HistoryHandler {
    */
   redo() {
     this.handleHistoryChange(() => {
-      const moved = this.history.nextMove();
+      const moved = this.history.redo();
       if (!moved) {
         this.notification.warning("Already at the end", { duration: 1500 });
         return false;
@@ -90,25 +90,18 @@ export class HistoryHandler {
    */
   updateView() {
     try {
-      // Get current position from history
-      const position = this.history.getCurrentPosition();
+      // Game state is already updated by history.undo/redo/jump
+      this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
+      
+      this.ui.updateMoveHistory(
+        this.history.getHistory(),
+        this.history.getCurrentIndex()
+      );
 
-      if (position) {
-        // Update game state for display (read-only)
-        this.board.renderPosition(position);
-        this.ui.updateMoveHistory(
-          this.history.getHistory(),
-          this.history.getCurrentIndex()
-        );
-
-        // Update game statistics display
-        const stats = this.history.getStatisticsAtIndex(
-          this.history.getCurrentIndex()
-        );
-        if (stats) {
-          this.ui.updateGameStatistics(stats);
-        }
-      }
+      // Update game statistics display
+      const stats = this.game.getGameStatistics();
+      this.ui.updateGameStatistics(stats);
+      
     } catch (error) {
       console.error("View update error:", error);
       this.notification.error("Failed to update view", { duration: 2000 });

@@ -46,22 +46,65 @@ export class BoardEventHandler {
     const row = parseInt(square.dataset.row);
     const col = parseInt(square.dataset.col);
 
-    // Check if piece was clicked (target could be the piece itself or its container)
-    const isPiece = event.target.classList.contains("piece") || square.querySelector(".piece");
-    
-    if (isPiece) {
-      this.emit("pieceSelected", { row, col });
-      // Also emit square selection for consistency
-      this.emit("squareSelected", { row, col });
-    } else {
-      this.emit("squareSelected", { row, col });
+    // If in edit mode, emit edit event and return
+    if (this.boardRenderer.isInEditMode()) {
+      this.emit("editSquare", { row, col });
+      return;
     }
+
+    // Check if piece was clicked (target could be the piece itself or its container)
+    const piece = square.querySelector(".piece") || (event.target.classList.contains("piece") ? event.target : null);
+    
+    if (this.selectedSquare) {
+      // If clicking the same square, deselect
+      if (this.selectedSquare.row === row && this.selectedSquare.col === col) {
+        this.clearSelection();
+        return;
+      }
+
+      // If clicking another piece, change selection
+      if (piece) {
+        this.selectedSquare = { row, col };
+        this.emit("pieceSelected", { row, col });
+        this.emit("squareSelected", { row, col });
+        return;
+      }
+
+      // If clicking an empty square, attempt move
+      const from = this.selectedSquare;
+      this.clearSelection();
+      
+      console.log("Emitting click-based moveAttempt from", from.row, from.col, "to", row, col);
+      this.emit("moveAttempt", {
+        from: from,
+        to: { row, col },
+      });
+    } else {
+      // No selection, select piece if clicked
+      if (piece) {
+        this.selectedSquare = { row, col };
+        this.emit("pieceSelected", { row, col });
+        this.emit("squareSelected", { row, col });
+      } else {
+        this.emit("squareSelected", { row, col });
+      }
+    }
+  }
+
+  /**
+   * Clear current selection
+   */
+  clearSelection() {
+    this.selectedSquare = null;
+    this.emit("selectionCleared");
   }
 
   /**
    * Handle mouse down on board
    */
   handleMouseDown(event) {
+    if (this.boardRenderer.isInEditMode()) return;
+
     const piece = event.target.closest(".piece");
     if (!piece) return;
 

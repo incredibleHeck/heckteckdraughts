@@ -9,39 +9,39 @@ export const AI_CONFIG = {
     // Difficulty settings - extracted from working version
     DIFFICULTY_LEVELS: {
         1: { 
-            maxDepth: 3, 
-            timeLimit: 500, 
+            maxDepth: 4, 
+            timeLimit: 1000, 
             quiescenceDepth: 2,
             description: "Beginner"
         },
         2: { 
-            maxDepth: 4, 
-            timeLimit: 1000, 
-            quiescenceDepth: 3,
-            description: "Easy"
-        },
-        3: { 
             maxDepth: 6, 
             timeLimit: 2000, 
             quiescenceDepth: 4,
-            description: "Medium"
+            description: "Easy"
         },
-        4: { 
+        3: { 
             maxDepth: 8, 
             timeLimit: 4000, 
-            quiescenceDepth: 5,
-            description: "Hard"
+            quiescenceDepth: 6,
+            description: "Intermediate"
+        },
+        4: { 
+            maxDepth: 12, 
+            timeLimit: 10000, 
+            quiescenceDepth: 8,
+            description: "Advanced"
         },
         5: { 
-            maxDepth: 10, 
-            timeLimit: 8000, 
-            quiescenceDepth: 6,
+            maxDepth: 16, 
+            timeLimit: 25000, 
+            quiescenceDepth: 10,
             description: "Expert"
         },
         6: { 
-            maxDepth: 12, 
-            timeLimit: 15000, 
-            quiescenceDepth: 8,
+            maxDepth: 20, 
+            timeLimit: 60000, 
+            quiescenceDepth: 14,
             description: "Grandmaster"
         }
     },

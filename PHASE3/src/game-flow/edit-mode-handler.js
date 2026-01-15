@@ -23,15 +23,18 @@ export class EditModeHandler {
     this.editMode = !this.editMode;
     this.game.gameMode = this.editMode ? GAME_MODE.EDIT : GAME_MODE.NORMAL;
 
+    // Toggle panel visibility
+    this.ui.toggleEditPanel(this.editMode);
+
     if (this.editMode) {
       this.notification.info(
         "Edit mode enabled. Click squares to place/remove pieces.",
         { duration: 3000 }
       );
-      this.board.setEditMode(true);
+      this.board.enableEditMode();
     } else {
       this.notification.info("Edit mode disabled", { duration: 1500 });
-      this.board.setEditMode(false);
+      this.board.disableEditMode();
     }
   }
 
@@ -64,7 +67,7 @@ export class EditModeHandler {
         this.game.setPiece(square.row, square.col, this.getNextPiece(piece));
       }
 
-      this.board.updateBoard(this.game.pieces, this.game.currentPlayer);
+      this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
     } catch (error) {
       console.error("Edit square error:", error);
       this.notification.error("Failed to edit square", { duration: 2000 });
@@ -123,7 +126,7 @@ export class EditModeHandler {
           this.game.setPiece(r, c, PIECE.NONE);
         }
       }
-      this.board.updateBoard(this.game.pieces, this.game.currentPlayer);
+      this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
       this.notification.success("Board cleared", { duration: 1500 });
     } catch (error) {
       console.error("Clear board error:", error);
@@ -137,8 +140,11 @@ export class EditModeHandler {
    */
   exportFEN() {
     try {
-      const fen = generateFEN(this.game);
-      this.notification.info("FEN copied to clipboard", { duration: 2000 });
+      const fen = generateFEN({
+        pieces: this.game.pieces,
+        currentPlayer: this.game.currentPlayer
+      });
+      this.notification.info("FEN generated", { duration: 2000 });
       return fen;
     } catch (error) {
       console.error("Export FEN error:", error);
@@ -160,9 +166,8 @@ export class EditModeHandler {
     }
 
     try {
-      const parsed = parseFEN(fen);
       this.game.loadFEN(fen);
-      this.board.updateBoard(this.game.pieces, this.game.currentPlayer);
+      this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
       this.notification.success("FEN imported successfully", {
         duration: 2000,
       });
@@ -180,7 +185,7 @@ export class EditModeHandler {
 
     try {
       this.game.reset();
-      this.board.updateBoard(this.game.pieces, this.game.currentPlayer);
+      this.board.renderPosition(this.game.pieces, this.game.currentPlayer);
       this.notification.success("Initial position set", { duration: 1500 });
     } catch (error) {
       console.error("Setup position error:", error);

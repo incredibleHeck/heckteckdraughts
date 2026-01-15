@@ -58,27 +58,28 @@ export class PositionEvaluator {
   evaluatePosition(position) {
     const { whiteCount, blackCount } = countPieces(position);
 
-    // Terminal positions
-    if (whiteCount === 0) {
-      return position.currentPlayer === PLAYER.BLACK ? 10000 : -10000;
-    }
-    if (blackCount === 0) {
-      return position.currentPlayer === PLAYER.WHITE ? 10000 : -10000;
-    }
+    // Terminal positions (absolute scores)
+    if (whiteCount === 0) return -10000;
+    if (blackCount === 0) return -10000;
 
+    // 1. Calculate all components from White's perspective first
+    
     // Material evaluation
-    const materialScore = this.materialEvaluator.getMaterialScore(position);
+    const material = this.materialEvaluator.evaluateMaterial(position);
+    const materialScore = material.balance;
 
     // Positional evaluation
     const { mgScore: mgPositional, egScore: egPositional } =
       this.positionalEvaluator.evaluatePositional(position);
-    const mobilityScore = this.positionalEvaluator.evaluateMobility(position);
-    const kingMobilityDiff =
-      this.positionalEvaluator.getKingMobilityDifference(position);
+    
+    // Mobility evaluation
+    const whiteMobility = this.positionalEvaluator.evaluateKingMobility(position, true);
+    const blackMobility = this.positionalEvaluator.evaluateKingMobility(position, false);
+    const mobilityScore = (whiteMobility - blackMobility) * this.tacticalWeights.MOBILITY_BONUS;
 
     // Combine positional and mobility
     let mgScore = mgPositional + mobilityScore;
-    let egScore = egPositional + kingMobilityDiff * 2;
+    let egScore = egPositional + mobilityScore;
 
     // Add material
     mgScore += materialScore;
@@ -89,29 +90,28 @@ export class PositionEvaluator {
     mgScore += patternScore;
 
     // Phase blending
-    let score = this.phaseCalculator.blendScores(mgScore, egScore, position);
+    let finalScore = this.phaseCalculator.blendScores(mgScore, egScore, position);
 
     // Draw adjustment
-    score = this.drawEvaluator.adjustForDraw(score, position);
+    finalScore = this.drawEvaluator.adjustForDraw(finalScore, position);
 
-    // Tactical analysis (if available)
+    // Tactical and Safety Analysis (if available)
     if (this.useTacticalAnalysis && this.tacticalAnalyzer) {
       try {
         const tacticalBonus = this.evaluateTacticalBonus(position);
-        score += tacticalBonus;
+        finalScore += tacticalBonus;
       } catch (error) {}
     }
 
-    // Safety analysis (if available)
     if (this.useSafetyAnalysis && this.safetyAnalyzer) {
       try {
         const safetyBonus = this.evaluateSafetyBonus(position);
-        score += safetyBonus;
+        finalScore += safetyBonus;
       } catch (error) {}
     }
 
-    // Apply player perspective
-    return position.currentPlayer === PLAYER.WHITE ? score : -score;
+    // 2. Converto to Negamax perspective (relative to current player)
+    return position.currentPlayer === PLAYER.WHITE ? finalScore : -finalScore;
   }
 
   /**

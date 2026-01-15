@@ -16,11 +16,14 @@
 import { SEARCH_CONFIG } from "../ai/ai.constants.js";
 import { generateMoves, makeMove } from "../ai/ai.utils.js";
 
+import { QuiescenceSearch } from "./search-quiescence.js";
+
 export class NegamaxSearch {
   constructor(evaluator, transpositionTable, moveOrderer) {
     this.evaluator = evaluator;
     this.tt = transpositionTable;
     this.moveOrderer = moveOrderer;
+    this.quiescence = new QuiescenceSearch(evaluator);
 
     this.nodeCount = 0;
     this.searchAborted = false;
@@ -37,15 +40,14 @@ export class NegamaxSearch {
     // Time check every 1000 nodes
     if (this.nodeCount % 1000 === 0) {
       if (Date.now() - startTime > timeLimit || this.searchAborted) {
-        return 0;
+        return this.evaluator.evaluatePosition(position);
       }
     }
 
     // Terminal node - delegate to quiescence
     if (depth <= 0) {
       this.selDepth = Math.max(this.selDepth, ply);
-      // Return 0 for quiescence delegation (handled by parent)
-      return this.evaluator.evaluatePosition(position);
+      return this.quiescence.search(position, alpha, beta, 4);
     }
 
     // Transposition table lookup - EXACT LOGIC PRESERVED

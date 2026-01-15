@@ -22,8 +22,11 @@ export class CaptureHandler {
     pieces,
     currentPos,
     path = [],
-    capturedSoFar = []
+    capturedSoFar = [],
+    recursionDepth = 0
   ) {
+    if (recursionDepth > 20) return []; // Prevent infinite recursion
+
     const sequences = [];
     let foundJump = false;
 
@@ -34,56 +37,95 @@ export class CaptureHandler {
     const isWhite = piece === PIECE.WHITE || piece === PIECE.WHITE_KING;
     const currentPlayer = isWhite ? PLAYER.WHITE : PLAYER.BLACK;
 
-    // Determine possible jump directions
-    // In International Draughts, all pieces jump in all 4 directions
+    // All pieces in International Draughts jump in all 4 directions
     const directions = DIRECTIONS.KING_MOVES;
 
-    // Try each direction for a capture
     for (const dir of directions) {
-      const jumpOverPos = {
-        row: currentPos.row + dir.dy,
-        col: currentPos.col + dir.dx,
-      };
+      if (isKing) {
+        // Flying king capture logic
+        let checkRow = currentPos.row + dir.dy;
+        let checkCol = currentPos.col + dir.dx;
+        let enemyPos = null;
 
-      const landPos = {
-        row: jumpOverPos.row + dir.dy,
-        col: jumpOverPos.col + dir.dx,
-      };
+        while (this.isValidSquare({ row: checkRow, col: checkCol })) {
+          const checkPiece = pieces[checkRow][checkCol];
 
-      // Check if jump is valid
-      if (!this.isValidSquare(landPos)) continue;
-      if (pieces[landPos.row][landPos.col] !== PIECE.NONE) continue;
+          if (checkPiece !== PIECE.NONE) {
+            if (this.isOpponentPiece(checkPiece, currentPlayer)) {
+              enemyPos = { row: checkRow, col: checkCol };
+              break;
+            } else {
+              break; // Blocked by own piece
+            }
+          }
+          checkRow += dir.dy;
+          checkCol += dir.dx;
+        }
 
-      const targetPiece = pieces[jumpOverPos.row][jumpOverPos.col];
-      if (!this.isOpponentPiece(targetPiece, currentPlayer)) continue;
+        if (enemyPos && !capturedSoFar.some(p => p.row === enemyPos.row && p.col === enemyPos.col)) {
+          let landRow = enemyPos.row + dir.dy;
+          let landCol = enemyPos.col + dir.dx;
 
-      // Check if already captured this piece
-      const alreadyCaptured = capturedSoFar.some(
-        (c) => c.row === jumpOverPos.row && c.col === jumpOverPos.col
-      );
-      if (alreadyCaptured) continue;
+          while (this.isValidSquare({ row: landRow, col: landCol }) && pieces[landRow][landCol] === PIECE.NONE) {
+            foundJump = true;
+            const newPieces = pieces.map(row => [...row]);
+            newPieces[currentPos.row][currentPos.col] = PIECE.NONE;
+            newPieces[enemyPos.row][enemyPos.col] = PIECE.NONE;
+            newPieces[landRow][landCol] = piece;
 
-      foundJump = true;
+            const morePath = path.length === 0 ? [currentPos] : path;
+            const moreSequences = this.findCaptureSequences(
+              newPieces,
+              { row: landRow, col: landCol },
+              morePath,
+              [...capturedSoFar, enemyPos],
+              recursionDepth + 1
+            );
+            sequences.push(...moreSequences);
 
-      // Clone pieces and apply this capture
-      const newPieces = pieces.map((row) => [...row]);
-      newPieces[currentPos.row][currentPos.col] = PIECE.NONE;
-      newPieces[jumpOverPos.row][jumpOverPos.col] = PIECE.NONE;
-      newPieces[landPos.row][landPos.col] = piece;
+            landRow += dir.dy;
+            landCol += dir.dx;
+          }
+        }
+      } else {
+        // Regular piece capture logic
+        const jumpOverPos = {
+          row: currentPos.row + dir.dy,
+          col: currentPos.col + dir.dx,
+        };
+        const landPos = {
+          row: currentPos.row + 2 * dir.dy,
+          col: currentPos.col + 2 * dir.dx,
+        };
 
-      // Recursively find more captures from new position
-      const morePath = path.length === 0 ? [currentPos] : path;
-      const moreSequences = this.findCaptureSequences(
-        newPieces,
-        landPos,
-        morePath,
-        [...capturedSoFar, jumpOverPos]
-      );
+        if (this.isValidSquare(landPos) && 
+            pieces[landPos.row][landPos.col] === PIECE.NONE && 
+            this.isOpponentPiece(pieces[jumpOverPos.row][jumpOverPos.col], currentPlayer)) {
+          
+          const alreadyCaptured = capturedSoFar.some(
+            (c) => c.row === jumpOverPos.row && c.col === jumpOverPos.col
+          );
+          if (!alreadyCaptured) {
+            foundJump = true;
+            const newPieces = pieces.map((row) => [...row]);
+            newPieces[currentPos.row][currentPos.col] = PIECE.NONE;
+            newPieces[jumpOverPos.row][jumpOverPos.col] = PIECE.NONE;
+            newPieces[landPos.row][landPos.col] = piece;
 
-      sequences.push(...moreSequences);
+            const morePath = path.length === 0 ? [currentPos] : path;
+            const moreSequences = this.findCaptureSequences(
+              newPieces,
+              landPos,
+              morePath,
+              [...capturedSoFar, jumpOverPos],
+              recursionDepth + 1
+            );
+            sequences.push(...moreSequences);
+          }
+        }
+      }
     }
 
-    // If no more jumps available, finalize this sequence
     if (!foundJump && capturedSoFar.length > 0) {
       sequences.push({
         from: path.length > 0 ? path[0] : currentPos,
