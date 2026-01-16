@@ -22,7 +22,7 @@
 - [x] Task: Port Search Engine (Negamax/Quiescence). (a3eeaa3)
     - [ ] Port files from `legacy/src/engine/ai-search/` to `src/engine/ai-search/`.
     - [ ] Port Search Stats and Engine orchestration.
-- [ ] Task: Integrate Web Worker AI.
+- [x] Task: Integrate Web Worker AI. (1c80fad)
     - [ ] Update `src/engine/worker/engine.worker.ts` to use the ported AI search logic.
     - [ ] Verify non-blocking AI calculation via the Web Worker bridge.
 - [ ] Task: Conductor - User Manual Verification 'AI & Evaluation Migration' (Protocol in workflow.md)
