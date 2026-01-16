@@ -19,6 +19,11 @@
 - [x] Task: Port Material and Positional Evaluators. (228b89a)
     - [ ] Port files from `legacy/src/engine/ai-evaluation/` to `src/engine/ai-evaluation/`.
     - [ ] Write tests to verify evaluation scores match legacy outputs for specific positions.
+- [x] Task: Port Safety, Tactics and Endgame Analyzers. (680af19)
+    - [ ] Port `legacy/src/engine/ai/ai.safety.js` to `src/engine/ai/ai.safety.ts`.
+    - [ ] Port `legacy/src/engine/ai/ai.tactics.js` to `src/engine/ai/ai.tactics.ts`.
+    - [ ] Port `legacy/src/engine/ai/ai.endgame.js` to `src/engine/ai/ai.endgame.ts`.
+    - [ ] Integrate these analyzers into `src/engine/ai-evaluation/position-evaluator.ts`.
 - [x] Task: Port Search Engine (Negamax/Quiescence). (a3eeaa3)
     - [ ] Port files from `legacy/src/engine/ai-search/` to `src/engine/ai-search/`.
     - [ ] Port Search Stats and Engine orchestration.
