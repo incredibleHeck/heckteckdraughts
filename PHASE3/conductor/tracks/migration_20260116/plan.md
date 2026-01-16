@@ -10,7 +10,7 @@
 - [x] Task: Port Move Validator. (5c6c755)
     - [ ] Port `legacy/src/engine/game/move-validator.js` to `src/engine/game/move-validator.ts`.
     - [ ] Write comprehensive tests for International Draughts rules (Majority Capture, King movement).
-- [ ] Task: Port Game State Logic.
+- [x] Task: Port Game State Logic. (3a95e54)
     - [ ] Port `legacy/src/engine/game.js` to `src/engine/game.ts`.
     - [ ] Ensure the "Source of Truth" board state works with the new TypeScript types.
 - [ ] Task: Conductor - User Manual Verification 'Core Engine & Rule Migration' (Protocol in workflow.md)
