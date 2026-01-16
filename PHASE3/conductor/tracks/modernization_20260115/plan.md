@@ -25,10 +25,10 @@
     - [ ] Ensure it renders within the `MainLayout` and respects the aspect-ratio CSS.
 - [x] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md) (dc82319)
 
-## Phase 2.5: Tailwind Refactor
+## Phase 2.5: Tailwind Refactor [checkpoint: 10c4237]
 - [x] Task: Refactor Layout components to use Tailwind.
 - [x] Task: Refactor UI components to use Tailwind.
-- [~] Task: Conductor - User Manual Verification 'Tailwind Refactor' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Tailwind Refactor' (Protocol in workflow.md) (10c4237)
 
 ## Phase 3: Engine Infrastructure
 - [ ] Task: Set up Web Worker Bridge.
