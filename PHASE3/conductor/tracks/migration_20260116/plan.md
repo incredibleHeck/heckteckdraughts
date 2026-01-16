@@ -4,7 +4,7 @@
 - [x] Task: Port Constants and Types. (1d8b052)
     - [ ] Create `src/engine/constants.ts` and define shared enums/types (`PIECE`, `PLAYER`, `SQUARE_NUMBERS`).
     - [ ] Write unit tests for coordinate mapping formulas.
-- [ ] Task: Port FEN Parser.
+- [x] Task: Port FEN Parser. (ecd0369)
     - [ ] Port `legacy/src/utils/fen-parser.js` to `src/utils/fen-parser.ts`.
     - [ ] Write tests for FEN string parsing and generation.
 - [ ] Task: Port Move Validator.
