@@ -9,6 +9,8 @@ test('renders layout with children', () => {
       onDifficultyChange={() => {}}
       gameMode="pva"
       onGameModeChange={() => {}}
+      userColor={1}
+      onUserColorChange={() => {}}
       majorityRule={true}
       onMajorityRuleChange={() => {}}
     >
