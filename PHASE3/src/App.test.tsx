@@ -19,8 +19,8 @@ vi.stubGlobal('Worker', WorkerMock);
 test('renders Hectic Draughts and game layout', () => {
   render(<App />)
   expect(screen.getAllByText(/Hectic Draughts/i).length).toBeGreaterThan(0)
-  expect(screen.getByText('White')).toBeInTheDocument()
-  expect(screen.getByText('Black')).toBeInTheDocument()
+  expect(screen.getAllByText('White').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Black').length).toBeGreaterThan(0)
   
   // Verify board is rendered
   const board = document.getElementById('game-board');

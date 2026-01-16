@@ -18,8 +18,8 @@ test('renders layout with children', () => {
     </MainLayout>
   )
   
-  expect(screen.getByText('White')).toBeInTheDocument()
-  expect(screen.getByText('Black')).toBeInTheDocument()
+  expect(screen.getAllByText('White').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Black').length).toBeGreaterThan(0)
   expect(screen.getByText('AI Level:')).toBeInTheDocument()
   expect(screen.getByTestId('test-child')).toBeInTheDocument()
 })

@@ -2,8 +2,15 @@
  * Ruthless Positional Evaluator (Tapered)
  */
 
-import { PIECE, BOARD_SIZE } from "../constants";
+import { PIECE, BOARD_SIZE, SQUARE_NUMBERS } from "../constants";
 import { Position } from "../../utils/fen-parser";
+import {
+  POSITIONAL,
+  CROWN_POSITIONAL,
+  POSITION_FIELDS,
+} from "./eval.constants";
+import { getStageParameters } from "./weight-normalization";
+import { countPieces } from "../ai/ai.utils";
 
 export interface PositionalEvaluation {
   mgScore: number;
@@ -11,58 +18,55 @@ export interface PositionalEvaluation {
 }
 
 export class PositionalEvaluator {
-  private weights: Record<string, [number, number]>;
-
-  constructor() {
-    this.weights = {
-      CENTER_CONTROL: [15, 5],
-      BASE_INTEGRITY: [20, 0],
-      ADVANCEMENT: [5, 15],
-      KING_CENTRALITY: [0, 30],
-      EDGE_WEAKNESS: [-5, -10],
-      TRAPPED_KING: [0, -50],
-      FORMATION_COLUMN: [5, 0],
-    };
-  }
-
   evaluatePositional(position: Position): PositionalEvaluation {
+    const { whiteCount, blackCount } = countPieces(position);
+    const totalPieces = whiteCount + blackCount;
+
+    const params = getStageParameters(totalPieces);
+
     let mgScore = 0;
     let egScore = 0;
 
     for (let r = 0; r < BOARD_SIZE; r++) {
       for (let c = 0; c < BOARD_SIZE; c++) {
-        if ((r + c) % 2 !== 0) continue; // Note: My isDarkSquare is (r+c)%2 === 0
+        const sq = SQUARE_NUMBERS[r * BOARD_SIZE + c];
+        if (sq === 0) continue;
 
         const piece = position.pieces[r][c];
         if (piece === PIECE.NONE) continue;
 
         const isWhite = piece === PIECE.WHITE || piece === PIECE.WHITE_KING;
         const isKing = piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING;
-        const multiplier = isWhite ? 1 : -1;
 
-        if (r >= 4 && r <= 5 && c >= 2 && c <= 7) {
-          mgScore += this.weights.CENTER_CONTROL[0] * multiplier;
-          egScore += this.weights.CENTER_CONTROL[1] * multiplier;
-        }
+        const fieldIdx = sq - 1;
+        const perspectiveIdx = isWhite ? fieldIdx : 49 - fieldIdx;
 
-        if (isWhite && r === 9) mgScore += this.weights.BASE_INTEGRITY[0];
-        if (!isWhite && r === 0) mgScore -= this.weights.BASE_INTEGRITY[0];
-
-        if (!isKing) {
-          const advancement = isWhite ? 9 - r : r;
-          mgScore += advancement * this.weights.ADVANCEMENT[0] * multiplier;
-          egScore += advancement * this.weights.ADVANCEMENT[1] * multiplier;
-
-          if (advancement > 7) egScore += 50 * multiplier;
-        }
+        // Base positional score (interpolated for men)
+        let pieceMgScore = 0;
+        let pieceEgScore = 0;
 
         if (isKing) {
-          const centerDist = Math.abs(r - 4.5) + Math.abs(c - 4.5);
-          egScore += (10 - centerDist) * this.weights.KING_CENTRALITY[1] * multiplier;
+          pieceMgScore = CROWN_POSITIONAL[perspectiveIdx];
+          pieceEgScore = CROWN_POSITIONAL[perspectiveIdx];
+        } else {
+          // Man scoring uses stage interpolation in C engine:
+          // positional[i]=(a*position_fields[0][i]+b*position_fields[1][i])/64;
+          pieceMgScore = Math.round(
+            (params.posA * POSITION_FIELDS[0][perspectiveIdx] +
+              params.posB * POSITION_FIELDS[1][perspectiveIdx]) /
+              64
+          );
+          // For EG, we can use the same or a fixed table, but C engine recalculates every stage.
+          // We'll use the interpolated one as MG and a slightly simplified one or same for EG
+          pieceEgScore = pieceMgScore;
+        }
 
-          if ((r === 0 && c === 9) || (r === 9 && c === 0)) {
-            egScore += this.weights.TRAPPED_KING[1] * multiplier;
-          }
+        if (isWhite) {
+          mgScore += pieceMgScore;
+          egScore += pieceEgScore;
+        } else {
+          mgScore -= pieceMgScore;
+          egScore -= pieceEgScore;
         }
       }
     }

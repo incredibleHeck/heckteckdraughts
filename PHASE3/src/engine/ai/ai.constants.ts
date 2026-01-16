@@ -44,8 +44,8 @@ export const AI_CONFIG = {
 
   EVALUATION: {
     MATERIAL: {
-      MAN: 100,
-      KING: 500,
+      MAN: 1000,
+      KING: 3300,
     },
     POSITIONAL: {
       ADVANCEMENT_BONUS: 5,
