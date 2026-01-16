@@ -1,6 +1,7 @@
 // src/hooks/useEngine.ts
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Position } from '../utils/fen-parser';
+import { Move } from '../engine/ai/ai.utils';
 
 export const useEngine = () => {
   const workerRef = useRef<Worker | null>(null);
@@ -36,11 +37,11 @@ export const useEngine = () => {
     };
   }, []);
 
-  const findBestMove = useCallback((position: Position, maxDepth: number, timeLimit: number) => {
+  const findBestMove = useCallback((position: Position, maxDepth: number, timeLimit: number, history: Move[] = []) => {
     if (!workerRef.current) return;
     workerRef.current.postMessage({
       type: 'SEARCH',
-      payload: { position, maxDepth, timeLimit }
+      payload: { position, maxDepth, timeLimit, history }
     });
   }, []);
 

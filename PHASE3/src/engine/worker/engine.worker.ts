@@ -22,10 +22,10 @@ self.onmessage = async (e: MessageEvent) => {
         engine = new SearchEngine();
       }
       
-      const { position, maxDepth, timeLimit } = payload;
+      const { position, maxDepth, timeLimit, history } = payload;
       
       try {
-        const result = await engine.findBestMove(position as Position, maxDepth, timeLimit);
+        const result = await engine.findBestMove(position as Position, maxDepth, timeLimit, history || []);
         self.postMessage({ type: 'SEARCH_RESULT', payload: result });
       } catch (error) {
         console.error('[Worker] Search Error:', error);
