@@ -19,7 +19,7 @@
 - [x] Task: Port Material and Positional Evaluators. (228b89a)
     - [ ] Port files from `legacy/src/engine/ai-evaluation/` to `src/engine/ai-evaluation/`.
     - [ ] Write tests to verify evaluation scores match legacy outputs for specific positions.
-- [ ] Task: Port Search Engine (Negamax/Quiescence).
+- [x] Task: Port Search Engine (Negamax/Quiescence). (a3eeaa3)
     - [ ] Port files from `legacy/src/engine/ai-search/` to `src/engine/ai-search/`.
     - [ ] Port Search Stats and Engine orchestration.
 - [ ] Task: Integrate Web Worker AI.
