@@ -143,6 +143,8 @@ function App() {
         onDifficultyChange={setDifficulty}
         gameMode={gameMode}
         onGameModeChange={setGameMode}
+        userColor={userColor}
+        onUserColorChange={handleUserColorChange}
         majorityRule={majorityRule}
         onMajorityRuleChange={setMajorityRule}
       >
