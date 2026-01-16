@@ -16,7 +16,7 @@
 - [ ] Task: Conductor - User Manual Verification 'Core Engine & Rule Migration' (Protocol in workflow.md)
 
 ## Phase 2: AI & Evaluation Migration
-- [ ] Task: Port Material and Positional Evaluators.
+- [x] Task: Port Material and Positional Evaluators. (228b89a)
     - [ ] Port files from `legacy/src/engine/ai-evaluation/` to `src/engine/ai-evaluation/`.
     - [ ] Write tests to verify evaluation scores match legacy outputs for specific positions.
 - [ ] Task: Port Search Engine (Negamax/Quiescence).
