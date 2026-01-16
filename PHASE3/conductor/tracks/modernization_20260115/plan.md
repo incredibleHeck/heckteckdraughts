@@ -10,7 +10,7 @@
     - [ ] Copy `assets/images/` to `src/assets/images/` or `public/images/`.
     - [ ] specific: Copy `css/style.css` content to `src/index.css` and refactor for modern React (e.g., :root variables).
     - [ ] Install and configure `classnames` or `clsx` for cleaner class management (optional but recommended).
-- [ ] Task: Conductor - User Manual Verification 'Environment & Scaffold' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Environment & Scaffold' (Protocol in workflow.md)
 
 ## Phase 2: Core Components & Layout
 - [ ] Task: Implement Global Layout.
