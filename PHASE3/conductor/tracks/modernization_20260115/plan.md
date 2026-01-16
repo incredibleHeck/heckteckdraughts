@@ -12,7 +12,7 @@
     - [ ] Install and configure `classnames` or `clsx` for cleaner class management (optional but recommended).
 - [x] Task: Conductor - User Manual Verification 'Environment & Scaffold' (Protocol in workflow.md) (9ff85c4)
 
-## Phase 2: Core Components & Layout
+## Phase 2: Core Components & Layout [checkpoint: 1c77b0b]
 - [x] Task: Implement Global Layout. (3d6852a)
     - [ ] Create `src/components/layout/MainLayout.tsx`.
     - [ ] Implement the `TopNav` component structure.
@@ -23,7 +23,7 @@
 - [x] Task: Implement Placeholder Board. (3d6852a)
     - [ ] Create `src/components/board/Board.tsx`.
     - [ ] Ensure it renders within the `MainLayout` and respects the aspect-ratio CSS.
-- [~] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md) (1c77b0b)
 
 ## Phase 3: Engine Infrastructure
 - [ ] Task: Set up Web Worker Bridge.
