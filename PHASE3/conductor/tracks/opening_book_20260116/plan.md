@@ -1,6 +1,6 @@
 # Implementation Plan - Implement Opening Book
 
-## Phase 1: Logic Port & Translation
+## Phase 1: Logic Port & Translation [checkpoint: d89ce8a]
 - [x] Task: Port `OpeningBook` Class to TypeScript. (e3a7b04)
     - [x] Create `src/utils/opening-book.ts`.
     - [x] Define interfaces for opening data structure.
