@@ -7,7 +7,7 @@
 - [x] Task: Port FEN Parser. (ecd0369)
     - [ ] Port `legacy/src/utils/fen-parser.js` to `src/utils/fen-parser.ts`.
     - [ ] Write tests for FEN string parsing and generation.
-- [ ] Task: Port Move Validator.
+- [x] Task: Port Move Validator. (5c6c755)
     - [ ] Port `legacy/src/engine/game/move-validator.js` to `src/engine/game/move-validator.ts`.
     - [ ] Write comprehensive tests for International Draughts rules (Majority Capture, King movement).
 - [ ] Task: Port Game State Logic.
