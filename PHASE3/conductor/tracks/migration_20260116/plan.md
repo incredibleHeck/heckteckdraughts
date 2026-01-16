@@ -1,6 +1,6 @@
 # Implementation Plan - Legacy Engine & Board Migration
 
-## Phase 1: Core Engine & Rule Migration
+## Phase 1: Core Engine & Rule Migration [checkpoint: 0885589]
 - [x] Task: Port Constants and Types. (1d8b052)
     - [ ] Create `src/engine/constants.ts` and define shared enums/types (`PIECE`, `PLAYER`, `SQUARE_NUMBERS`).
     - [ ] Write unit tests for coordinate mapping formulas.
