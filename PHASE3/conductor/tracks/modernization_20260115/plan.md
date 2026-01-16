@@ -23,7 +23,12 @@
 - [x] Task: Implement Placeholder Board. (3d6852a)
     - [ ] Create `src/components/board/Board.tsx`.
     - [ ] Ensure it renders within the `MainLayout` and respects the aspect-ratio CSS.
-- [x] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md) (1c77b0b)
+- [x] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md) (dc82319)
+
+## Phase 2.5: Tailwind Refactor
+- [x] Task: Refactor Layout components to use Tailwind.
+- [x] Task: Refactor UI components to use Tailwind.
+- [~] Task: Conductor - User Manual Verification 'Tailwind Refactor' (Protocol in workflow.md)
 
 ## Phase 3: Engine Infrastructure
 - [ ] Task: Set up Web Worker Bridge.

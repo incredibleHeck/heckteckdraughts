@@ -17,3 +17,10 @@
 - **Type Safety:** TypeScript (Strict Mode)
 - **Linting & Formatting:** Biome (as per project standards)
 - **Testing:** Vitest (for engine and logic testing)
+
+- [x] **Styling:** Tailwind CSS + CSS Modules (for the Hectic Dark theme)
+- [x] **AI/Engine Logic:** Existing modular JavaScript/TypeScript logic, ported to TypeScript and running in Web Workers.
+- [x] **Build Tool:** Vite
+
+---
+*Update 2026-01-16: Added Tailwind CSS for utility-first styling and faster UI development.*

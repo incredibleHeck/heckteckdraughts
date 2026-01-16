@@ -1,5 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-hectic-bg: #1c1e22;
+  --color-hectic-gold: #ffc857;
+  --color-hectic-panel: rgba(30, 32, 38, 0.85);
+}
+
 /* --- Hectic Draughts - Ruthless Optimized Dark Theme --- */
-/* Consolidated Source: 2026 Stable Build */
 
 :root {
   /* Typography */
@@ -94,174 +101,6 @@ body {
   background-size: cover;
   /* Isolates board rendering to its own layer for performance */
   contain: layout paint;
-}
-
-/* --- Pieces (GPU Accelerated) --- */
-.piece {
-  position: absolute;
-  z-index: 10;
-  cursor: grab;
-  will-change: transform;
-  backface-visibility: hidden;
-  transition: var(--piece-transition);
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
-}
-
-.piece.dragging {
-  cursor: grabbing;
-  z-index: 1000;
-  transition: none !important;
-  transform: scale(1.1) !important;
-  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
-}
-
-.piece.captured {
-  opacity: 0;
-  transform: scale(0.2) rotate(45deg);
-  pointer-events: none;
-}
-
-/* --- Evaluation Gauge --- */
-.evaluation-gauge {
-  width: 12px;
-  height: 100%;
-  background: var(--eval-black);
-  position: absolute;
-  left: -24px;
-  top: 0;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid var(--panel-border);
-}
-
-.evaluation-gauge-fill {
-  width: 100%;
-  height: 50%;
-  background: var(--eval-white);
-  position: absolute;
-  bottom: 0;
-  transition: height 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-  z-index: 1;
-}
-
-.evaluation-gauge::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.3);
-  z-index: 2;
-}
-
-/* --- Highlighting System --- */
-.board-square.selected-square {
-  box-shadow: inset 0 0 0 3px var(--text-accent),
-    inset 0 0 15px var(--accent-gold-glow);
-  background-color: rgba(255, 200, 87, 0.1) !important;
-}
-
-.board-square.hint-dot::after {
-  content: "";
-  position: absolute;
-  width: 20%;
-  height: 20%;
-  background: var(--dot-color);
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.board-square.threat-capture {
-  background-color: rgba(34, 197, 94, 0.15) !important;
-  box-shadow: inset 0 0 15px var(--accent-green-capture);
-  animation: pulse-green 2s infinite;
-}
-
-.last-move-from {
-  background-color: rgba(255, 200, 87, 0.1) !important;
-}
-.last-move-to {
-  background-color: rgba(255, 200, 87, 0.25) !important;
-}
-
-/* --- Side Panels & Stats --- */
-.left-panel {
-  flex: 0 0 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.control-section {
-  padding: 20px;
-  border-radius: var(--border-radius-md);
-}
-
-#move-history {
-  display: flex;
-  flex-direction: column;
-  height: 300px;
-  overflow-y: auto;
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-}
-
-.move-row {
-  display: grid;
-  grid-template-columns: 40px 1fr 1fr;
-  padding: 8px;
-  border-bottom: 1px solid var(--panel-border);
-}
-
-.move-item.active {
-  background: var(--text-accent);
-  color: #000;
-  font-weight: bold;
-  border-radius: 4px;
-}
-
-/* --- Graveyard --- */
-.graveyard {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: var(--border-radius-sm);
-  min-height: 40px;
-}
-
-/* --- Notifications --- */
-.notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 15px 25px;
-  border-radius: var(--border-radius-sm);
-  z-index: 10000;
-  transform: translateX(120%);
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  background: var(--panel-bg);
-  border-left: 4px solid var(--text-accent);
-}
-
-.notification.show {
-  transform: translateX(0);
-}
-
-/* --- Animations --- */
-@keyframes pulse-green {
-  0%,
-  100% {
-    box-shadow: inset 0 0 10px var(--accent-green-capture);
-  }
-  50% {
-    box-shadow: inset 0 0 20px var(--accent-green-capture);
-  }
 }
 
 /* --- Loading Screen --- */
