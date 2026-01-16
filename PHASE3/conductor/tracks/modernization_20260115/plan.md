@@ -30,7 +30,7 @@
 - [x] Task: Refactor UI components to use Tailwind.
 - [x] Task: Conductor - User Manual Verification 'Tailwind Refactor' (Protocol in workflow.md) (10c4237)
 
-## Phase 3: Engine Infrastructure
+## Phase 3: Engine Infrastructure [checkpoint: 0d27e29]
 - [x] Task: Set up Web Worker Bridge.
     - [ ] Create `src/engine/worker/engine.worker.ts`.
     - [ ] Create `src/hooks/useEngine.ts` to manage the worker instance.
@@ -38,4 +38,4 @@
 - [x] Task: Configure Testing.
     - [ ] Install and configure `vitest` and `@testing-library/react`.
     - [ ] Write a smoke test for the `App` component.
-- [~] Task: Conductor - User Manual Verification 'Engine Infrastructure' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Engine Infrastructure' (Protocol in workflow.md) (0d27e29)
