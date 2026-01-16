@@ -35,18 +35,29 @@ export class SearchEngine {
   async findBestMove(position: Position, maxDepth: number, timeLimit: number, history: Move[] | null = null) {
     // Check opening book first
     const bookMove = this.openingBook.findMove(history);
+    
+    this.stats.startTimer();
+    
+    // If we have a book move, we still run a quick search to warm up the TT 
+    // and provide feedback to the user that the AI is "calculating".
     if (bookMove) {
       console.log('[SearchEngine] Opening Book Hit:', bookMove);
+      
+      // Run a shallow search (e.g. depth 6) very quickly to populate stats
+      const result = await this.iterative.search(position, 6, 500, Date.now());
+      this.stats.stopTimer();
+
+      const finalStats = this.stats.getStats();
+
       return {
-        move: bookMove,
-        score: 0,
-        depth: 0,
-        stats: { nodes: 0, time: 0, nps: 0, ttHits: 0, selDepth: 0 },
-        formattedStats: "Opening Book"
+        move: bookMove, // Still use the book move
+        score: result.score,
+        depth: (result as any).depth || 6,
+        stats: finalStats,
+        formattedStats: `Opening Book (${this.stats.formatStats()})`
       };
     }
 
-    this.stats.startTimer();
     const result = await this.iterative.search(position, maxDepth, timeLimit, Date.now());
     this.stats.stopTimer();
     

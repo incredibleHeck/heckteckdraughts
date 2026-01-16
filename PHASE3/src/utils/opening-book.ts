@@ -40,7 +40,6 @@ export class OpeningBook {
   public findMove(history: Move[] | null): Move | null {
     if (history === null) return null;
 
-    // Convert history to PDN-like "from-to" strings for easier matching
     const historyStrings = history.map(m => {
       const fromPdn = SQUARE_NUMBERS[m.from.row * BOARD_SIZE + m.from.col];
       const toPdn = SQUARE_NUMBERS[m.to.row * BOARD_SIZE + m.to.col];
@@ -60,8 +59,15 @@ export class OpeningBook {
 
     if (candidateMoves.length === 0) return null;
 
-    // Pick a random candidate move if multiple openings match
-    const selected = candidateMoves[Math.floor(Math.random() * candidateMoves.length)];
+    // Prioritize openings with longer total move sequences to stay in book longer
+    const sorted = candidateMoves.sort((a, b) => {
+      const opA = this.openings.find(o => o.moves.includes(a));
+      const opB = this.openings.find(o => o.moves.includes(b));
+      return (opB?.moves.length || 0) - (opA?.moves.length || 0);
+    });
+
+    // Pick the best candidate (longest line) or random among top candidates
+    const selected = sorted[0];
     
     return this.translateOpeningMove(selected);
   }

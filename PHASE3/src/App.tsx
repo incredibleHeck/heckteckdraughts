@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 import MainLayout from '@/components/layout/MainLayout'
 import AnalysisPanel from '@/components/ui/panels/AnalysisPanel'
@@ -31,11 +31,13 @@ function App() {
   const [selectedSquare, setSelectedSquare] = useState<{row: number, col: number} | null>(null);
   const [highlights, setHighlights] = useState<{row: number, col: number, type: 'selected' | 'hint' | 'last-move'}[]>([]);
   const [moveHistory, setMoveHistory] = useState<any[]>([]);
+  const [gameUpdateKey, setGameUpdateKey] = useState(0); // Explicit key to trigger AI safely
 
   // --- Helpers ---
   const refreshBoard = useCallback(() => {
     setPieces([...game.pieces.map(row => new Int8Array(row))]);
     setMoveHistory([...game.moveHistory]);
+    setGameUpdateKey(k => k + 1); // Increment to signal turn/state change
   }, [game]);
 
   const translateMoveToNotation = (move: Move) => {
@@ -54,37 +56,46 @@ function App() {
   };
 
   // --- AI Trigger Logic ---
+  const isThinkingRef = useRef(false);
+
   useEffect(() => {
     const isAITurn = gameMode === 'pva' && game.currentPlayer !== userColor;
     
-    if (isAITurn && isReady && !isThinking) {
-      console.log('[App] Triggering AI Move');
+    if (isAITurn && isReady && !isThinkingRef.current && game.gameState === 'ongoing') {
+      console.log('[App] Triggering AI Move (Update Key:', gameUpdateKey, ')');
+      isThinkingRef.current = true;
       setIsThinking(true);
       
       const config = AI_CONFIG.DIFFICULTY_LEVELS[difficulty];
       const history = game.moveHistory.map(h => h.move);
       findBestMove(game.toPosition(), config.maxDepth, config.timeLimit, history);
     }
-  }, [game.currentPlayer, gameMode, isReady, difficulty, findBestMove, game, userColor, isThinking]);
+  }, [gameUpdateKey, isReady, gameMode, userColor, difficulty, findBestMove, game]);
 
   // --- AI Result Handler ---
   useEffect(() => {
     if (lastResult) {
       console.log('[App] AI Move Received:', lastResult);
-      setIsThinking(false);
       setEngineStats(lastResult);
 
       if (lastResult.move) {
         // Execute AI move with a small delay for better UX
         setTimeout(() => {
-          game.makeMove(lastResult.move);
-          refreshBoard();
-          setHighlights([{ 
-            row: lastResult.move.to.row, 
-            col: lastResult.move.to.col, 
-            type: 'last-move' 
-          }]);
+          const success = game.makeMove(lastResult.move);
+          if (success) {
+            refreshBoard();
+            setHighlights([{ 
+              row: lastResult.move.to.row, 
+              col: lastResult.move.to.col, 
+              type: 'last-move' 
+            }]);
+          }
+          isThinkingRef.current = false;
+          setIsThinking(false);
         }, 500);
+      } else {
+        isThinkingRef.current = false;
+        setIsThinking(false);
       }
     }
   }, [lastResult, game, refreshBoard]);
