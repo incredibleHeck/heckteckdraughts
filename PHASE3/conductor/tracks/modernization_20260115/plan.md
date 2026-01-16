@@ -23,7 +23,7 @@
 - [x] Task: Implement Placeholder Board. (3d6852a)
     - [ ] Create `src/components/board/Board.tsx`.
     - [ ] Ensure it renders within the `MainLayout` and respects the aspect-ratio CSS.
-- [ ] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md)
 
 ## Phase 3: Engine Infrastructure
 - [ ] Task: Set up Web Worker Bridge.

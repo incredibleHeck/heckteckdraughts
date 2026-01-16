@@ -2,8 +2,10 @@ import { render, screen } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import App from './App'
 
-test('renders vite and react logos', () => {
+test('renders Hectic Draughts and game layout', () => {
   render(<App />)
-  expect(screen.getByAltText('Vite logo')).toBeInTheDocument()
-  expect(screen.getByAltText('React logo')).toBeInTheDocument()
+  expect(screen.getAllByText('Hectic Draughts').length).toBeGreaterThan(0)
+  expect(screen.getByText('White')).toBeInTheDocument()
+  expect(screen.getByText('Black')).toBeInTheDocument()
+  expect(screen.getByText('Board Placeholder (10x10)')).toBeInTheDocument()
 })
