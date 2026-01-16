@@ -31,11 +31,11 @@
 - [x] Task: Conductor - User Manual Verification 'Tailwind Refactor' (Protocol in workflow.md) (10c4237)
 
 ## Phase 3: Engine Infrastructure
-- [ ] Task: Set up Web Worker Bridge.
+- [x] Task: Set up Web Worker Bridge.
     - [ ] Create `src/engine/worker/engine.worker.ts`.
     - [ ] Create `src/hooks/useEngine.ts` to manage the worker instance.
     - [ ] Verify communication by sending a ping/pong message logged to the console.
-- [ ] Task: Configure Testing.
+- [x] Task: Configure Testing.
     - [ ] Install and configure `vitest` and `@testing-library/react`.
     - [ ] Write a smoke test for the `App` component.
-- [ ] Task: Conductor - User Manual Verification 'Engine Infrastructure' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Engine Infrastructure' (Protocol in workflow.md)
