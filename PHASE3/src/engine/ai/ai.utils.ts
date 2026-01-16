@@ -314,6 +314,59 @@ export function addNormalMovesForPiece(moves: Move[], position: Position, r: num
   }
 }
 
+// ============================================
+// ZOBRIST HASHING (Lazy Initialization)
+// ============================================
+let ZOBRIST_TABLE: any = null;
+
+function getZobristTable() {
+  if (!ZOBRIST_TABLE) {
+    let seed = 123456789;
+    const random = () => {
+      seed = (Math.imul(1597334677, seed) + 12345) | 0;
+      return Math.abs(seed);
+    };
+
+    ZOBRIST_TABLE = new Array(BOARD_SIZE * BOARD_SIZE).fill(null).map(() => ({
+      [PIECE.WHITE]: random(),
+      [PIECE.WHITE_KING]: random(),
+      [PIECE.BLACK]: random(),
+      [PIECE.BLACK_KING]: random(),
+      [PLAYER.WHITE]: random(), // Side to move
+    }));
+  }
+  return ZOBRIST_TABLE;
+}
+
+export function generatePositionKey(position: Position): number {
+  const table = getZobristTable();
+  let hash = 0;
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    let c = r % 2 === 0 ? 0 : 1;
+    for (; c < BOARD_SIZE; c += 2) {
+      const piece = position.pieces[r][c];
+      if (piece !== PIECE.NONE) {
+        const index = r * BOARD_SIZE + c;
+        hash ^= table[index][piece];
+      }
+    }
+  }
+  
+  if (position.currentPlayer === PLAYER.WHITE) {
+    hash ^= table[0][PLAYER.WHITE];
+  }
+
+  return hash;
+}
+
+export function clonePosition(position: Position): Position {
+  return {
+    pieces: position.pieces.map((row) => new Int8Array(row)),
+    currentPlayer: position.currentPlayer,
+  };
+}
+
 export function isSameMove(move1: Move | null, move2: Move | null): boolean {
   if (!move1 || !move2) return false;
   return (
