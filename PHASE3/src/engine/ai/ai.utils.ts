@@ -367,6 +367,32 @@ export function clonePosition(position: Position): Position {
   };
 }
 
+export function countPieces(position: Position) {
+  let whiteCount = 0,
+    blackCount = 0,
+    whiteKings = 0,
+    blackKings = 0;
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    let c = r % 2 === 0 ? 0 : 1;
+    for (; c < BOARD_SIZE; c += 2) {
+      const piece = position.pieces[r][c];
+      if (piece === PIECE.NONE) continue;
+
+      if (piece === PIECE.WHITE) whiteCount++;
+      else if (piece === PIECE.BLACK) blackCount++;
+      else if (piece === PIECE.WHITE_KING) {
+        whiteCount++;
+        whiteKings++;
+      } else if (piece === PIECE.BLACK_KING) {
+        blackCount++;
+        blackKings++;
+      }
+    }
+  }
+  return { whiteCount, blackCount, whiteKings, blackKings };
+}
+
 export function isSameMove(move1: Move | null, move2: Move | null): boolean {
   if (!move1 || !move2) return false;
   return (
