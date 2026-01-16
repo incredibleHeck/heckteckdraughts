@@ -37,7 +37,9 @@ export class OpeningBook {
     }
   }
 
-  public findMove(history: Move[]): Move | null {
+  public findMove(history: Move[] | null): Move | null {
+    if (history === null) return null;
+
     // Convert history to PDN-like "from-to" strings for easier matching
     const historyStrings = history.map(m => {
       const fromPdn = SQUARE_NUMBERS[m.from.row * BOARD_SIZE + m.from.col];
@@ -67,11 +69,9 @@ export class OpeningBook {
   private matchesHistory(openingMoves: OpeningMove[], historyStrings: string[]): boolean {
     if (openingMoves.length <= historyStrings.length) return false;
 
+    // We only match if history is a direct prefix of this opening
     for (let i = 0; i < historyStrings.length; i++) {
       const opMove = openingMoves[i];
-      // Note: opening-book notation in JSON is like "32-28"
-      // Wait, openingMoves[i].from/to are pdn-1 according to JSON rule
-      // But let's check the notation field.
       const opPdnFrom = opMove.from + 1;
       const opPdnTo = opMove.to + 1;
       const opString = `${opPdnFrom}-${opPdnTo}`;

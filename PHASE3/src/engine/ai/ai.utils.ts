@@ -332,7 +332,7 @@ function getZobristTable() {
       [PIECE.WHITE_KING]: random(),
       [PIECE.BLACK]: random(),
       [PIECE.BLACK_KING]: random(),
-      [PLAYER.WHITE]: random(), // Side to move
+      'SIDE_TO_MOVE': random(), // Side to move
     }));
   }
   return ZOBRIST_TABLE;
@@ -354,7 +354,7 @@ export function generatePositionKey(position: Position): number {
   }
   
   if (position.currentPlayer === PLAYER.WHITE) {
-    hash ^= table[0][PLAYER.WHITE];
+    hash ^= table[0]['SIDE_TO_MOVE'];
   }
 
   return hash;

@@ -6,7 +6,6 @@ import {
   generateMoves,
   makeMove,
   generatePositionKey,
-  isEndgame,
   Move,
 } from "../ai/ai.utils";
 import { PositionEvaluator } from "../ai-evaluation/position-evaluator";

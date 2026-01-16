@@ -14,6 +14,7 @@ function App() {
   // --- Game Settings State ---
   const [difficulty, setDifficulty] = useState(6); // Default World Class
   const [gameMode, setGameMode] = useState<'pva' | 'pvp'>('pva');
+  const [userColor, setUserColor] = useState<number>(PLAYER.WHITE);
   const [majorityRule, setMajorityRule] = useState(true);
 
   // --- Engine Bridge ---
@@ -44,9 +45,17 @@ function App() {
     return `${from}${sep}${to}`;
   };
 
+  const handleUserColorChange = (color: number) => {
+    setUserColor(color);
+    game.reset(); // Reset game when color changes
+    refreshBoard();
+    setHighlights([]);
+    setSelectedSquare(null);
+  };
+
   // --- AI Trigger Logic ---
   useEffect(() => {
-    const isAITurn = gameMode === 'pva' && game.currentPlayer === PLAYER.BLACK;
+    const isAITurn = gameMode === 'pva' && game.currentPlayer !== userColor;
     
     if (isAITurn && isReady && !isThinking) {
       console.log('[App] Triggering AI Move');
@@ -56,7 +65,7 @@ function App() {
       const history = game.moveHistory.map(h => h.move);
       findBestMove(game.toPosition(), config.maxDepth, config.timeLimit, history);
     }
-  }, [game.currentPlayer, gameMode, isReady, difficulty, findBestMove, game]);
+  }, [game.currentPlayer, gameMode, isReady, difficulty, findBestMove, game, userColor, isThinking]);
 
   // --- AI Result Handler ---
   useEffect(() => {

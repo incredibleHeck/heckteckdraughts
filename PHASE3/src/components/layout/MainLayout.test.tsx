@@ -1,10 +1,17 @@
 import { render, screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import MainLayout from './MainLayout'
 
 test('renders layout with children', () => {
   render(
-    <MainLayout>
+    <MainLayout
+      difficulty={6}
+      onDifficultyChange={() => {}}
+      gameMode="pva"
+      onGameModeChange={() => {}}
+      majorityRule={true}
+      onMajorityRuleChange={() => {}}
+    >
       <div data-testid="test-child">Test Content</div>
     </MainLayout>
   )

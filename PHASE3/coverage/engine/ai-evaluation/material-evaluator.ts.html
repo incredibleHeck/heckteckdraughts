@@ -3,15 +3,15 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for engine/constants.ts</title>
+    <title>Code coverage report for engine/ai-evaluation/material-evaluator.ts</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="../prettify.css" />
-    <link rel="stylesheet" href="../base.css" />
-    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(../sort-arrow-sprite.png);
+            background-image: url(../../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">engine</a> constants.ts</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">engine/ai-evaluation</a> material-evaluator.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">79.41% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>25/25</span>
+                <span class='fraction'>27/34</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">62.5% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>10/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>2/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">77.41% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>21/21</span>
+                <span class='fraction'>24/31</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -137,29 +137,85 @@
 <a name='L72'></a><a href='#L72'>72</a>
 <a name='L73'></a><a href='#L73'>73</a>
 <a name='L74'></a><a href='#L74'>74</a>
-<a name='L75'></a><a href='#L75'>75</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-yes">200x</span>
+<span class="cline-any cline-yes">200x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -169,122 +225,96 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">100x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">100x</span>
-<span class="cline-any cline-yes">50x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
- * Global Physical Constants
- * Context: HORIZONTALLY FLIPPED BOARD (10x10)
+ * Ruthless Material Evaluator
  */
 &nbsp;
-export const BOARD_SIZE = 10;
+import { PIECE, PLAYER, BOARD_SIZE } from "../constants";
+import { Position } from "../../utils/fen-parser";
 &nbsp;
-export enum PIECE {
-  NONE = 0,
-  WHITE = 1,
-  BLACK = 2,
-  WHITE_KING = 3,
-  BLACK_KING = 4,
+export interface MaterialWeights {
+  MAN: number;
+  KING: number;
 }
 &nbsp;
-export enum PLAYER {
-  WHITE = 1,
-  BLACK = 2,
+export interface MaterialEvaluation {
+  whiteMaterial: number;
+  blackMaterial: number;
+  whiteKings: number;
+  blackKings: number;
+  balance: number;
 }
 &nbsp;
-export type GameStatus = "ongoing" | "whiteWin" | "blackWin" | "draw";
+export class MaterialEvaluator {
+  private baseWeights: MaterialWeights;
 &nbsp;
-export const GAME_STATE: Record&lt;string, GameStatus&gt; = {
-  ONGOING: "ongoing",
-  WHITE_WIN: "whiteWin",
-  BLACK_WIN: "blackWin",
-  DRAW: "draw",
-};
+  constructor(materialWeights?: MaterialWeights) {
+    this.baseWeights = materialWeights || {
+      MAN: 100,
+      KING: 450,
+    };
+  }
 &nbsp;
-/**
- * Mirror-specific Dark Square logic (row + col must be even)
- */
-export function isDarkSquare(row: number, col: number): boolean {
-  return (row + col) % 2 === 0;
-}
+  evaluateMaterial(position: Position): MaterialEvaluation {
+    let whiteMaterial = 0;
+    let blackMaterial = 0;
+    let whiteKings = 0;
+    let blackKings = 0;
+    let whiteMen = 0;
+    let blackMen = 0;
 &nbsp;
-/**
- * Notation Mapping (1-50) adapted for Flipped Board (Right-to-Left)
- */
-export const SQUARE_NUMBERS: Int32Array = (function () {
-  const numbers = new Int32Array(BOARD_SIZE * BOARD_SIZE);
-  let count = 1;
-  for (let row = 0; row &lt; BOARD_SIZE; row++) {
-    // Number from Right to Left
-    for (let col = BOARD_SIZE - 1; col &gt;= 0; col--) {
-      if (isDarkSquare(row, col)) {
-        numbers[row * BOARD_SIZE + col] = count++;
+    for (let r = 0; r &lt; BOARD_SIZE; r++) {
+      for (let c = 0; c &lt; BOARD_SIZE; c++) {
+        const piece = position.pieces[r][c];
+        if (piece === PIECE.NONE) continue;
+&nbsp;
+        if (piece === PIECE.WHITE) {
+          whiteMaterial += this.baseWeights.MAN;
+          whiteMen++;
+        <span class="missing-if-branch" title="if path not taken" >I</span>} else if (piece === PIECE.WHITE_KING) {
+<span class="cstat-no" title="statement not covered" >          whiteMaterial += this.baseWeights.KING;</span>
+<span class="cstat-no" title="statement not covered" >          whiteKings++;</span>
+        } else if (piece === PIECE.BLACK) {
+          blackMaterial += this.baseWeights.MAN;
+          blackMen++;
+<span class="cstat-no" title="statement not covered" >        <span class="missing-if-branch" title="else path not taken" >E</span>} else if (piece === PIECE.BLACK_KING) {</span>
+<span class="cstat-no" title="statement not covered" >          blackMaterial += this.baseWeights.KING;</span>
+<span class="cstat-no" title="statement not covered" >          blackKings++;</span>
+        }
       }
     }
+&nbsp;
+    const totalPieces = whiteMen + whiteKings + blackMen + blackKings;
+&nbsp;
+    let scale = 1.0;
+    if (totalPieces &lt; 15) {
+      scale = 1.0 + (15 - totalPieces) * 0.05;
+    }
+&nbsp;
+    const rawBalance = whiteMaterial - blackMaterial;
+&nbsp;
+    return {
+      whiteMaterial,
+      blackMaterial,
+      whiteKings,
+      blackKings,
+      balance: Math.round(rawBalance * scale),
+    };
   }
-  return numbers;
-})();
 &nbsp;
-export interface Direction {
-  dy: number;
-  dx: number;
+<span class="fstat-no" title="function not covered" >  getMaterialScore(p</span>osition: Position): number {
+    const material = <span class="cstat-no" title="statement not covered" >this.evaluateMaterial(position);</span>
+<span class="cstat-no" title="statement not covered" >    return position.currentPlayer === PLAYER.WHITE</span>
+      ? material.balance
+      : -material.balance;
+  }
 }
-&nbsp;
-export const DIRECTIONS = {
-  WHITE_MOVES: [
-    { dy: -1, dx: -1 },
-    { dy: -1, dx: 1 },
-  ] as Direction[],
-  BLACK_MOVES: [
-    { dy: 1, dx: -1 },
-    { dy: 1, dx: 1 },
-  ] as Direction[],
-  KING_MOVES: [
-    { dy: -1, dx: -1 },
-    { dy: -1, dx: 1 },
-    { dy: 1, dx: -1 },
-    { dy: 1, dx: 1 },
-  ] as Direction[],
-};
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -294,14 +324,14 @@ export const DIRECTIONS = {
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
                 at 2026-01-16T04:46:51.531Z
             </div>
-        <script src="../prettify.js"></script>
+        <script src="../../prettify.js"></script>
         <script>
             window.onload = function () {
                 prettyPrint();
             };
         </script>
-        <script src="../sorter.js"></script>
-        <script src="../block-navigation.js"></script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
     </body>
 </html>
     
