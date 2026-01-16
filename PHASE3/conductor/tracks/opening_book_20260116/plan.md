@@ -23,10 +23,10 @@
 - [x] Task: Conductor - User Manual Verification 'Engine Integration' (Protocol in workflow.md) (ec42660)
 
 ## Phase 3: Player Color Selection
-- [ ] Task: Add Color Selection to UI.
-    - [ ] Update `src/components/layout/MainLayout.tsx` to allow choosing "Play as White" or "Play as Black".
-- [ ] Task: Update Game Logic for Starting Color.
-    - [ ] Update `src/App.tsx` to track `userColor` and trigger AI if `userColor` is Black.
-- [ ] Task: Verify Opening Book as White AI.
-    - [ ] Confirm AI (playing as White) uses book moves for the opening.
-    - [ ] Task: Conductor - User Manual Verification 'Player Color Selection' (Protocol in workflow.md)
+- [x] Task: Add Color Selection to UI. (6de1cde)
+    - [x] Update `src/components/layout/MainLayout.tsx` to allow choosing "Play as White" or "Play as Black".
+- [x] Task: Update Game Logic for Starting Color. (6de1cde)
+    - [x] Update `src/App.tsx` to track `userColor` and trigger AI if `userColor` is Black.
+- [x] Task: Verify Opening Book as White AI. (6de1cde)
+    - [x] Confirm AI (playing as White) uses book moves for the opening.
+    - [x] Task: Conductor - User Manual Verification 'Player Color Selection' (Protocol in workflow.md) (6de1cde)
