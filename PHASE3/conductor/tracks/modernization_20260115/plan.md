@@ -13,14 +13,14 @@
 - [x] Task: Conductor - User Manual Verification 'Environment & Scaffold' (Protocol in workflow.md) (9ff85c4)
 
 ## Phase 2: Core Components & Layout
-- [ ] Task: Implement Global Layout.
+- [x] Task: Implement Global Layout.
     - [ ] Create `src/components/layout/MainLayout.tsx`.
     - [ ] Implement the `TopNav` component structure.
     - [ ] Implement the `PlayersBar` component structure.
-- [ ] Task: Implement Loading Screen.
+- [x] Task: Implement Loading Screen.
     - [ ] Create `src/components/ui/LoadingScreen.tsx`.
     - [ ] Replicate the CSS-based spinner and fade-out logic using React `useEffect`.
-- [ ] Task: Implement Placeholder Board.
+- [x] Task: Implement Placeholder Board.
     - [ ] Create `src/components/board/Board.tsx`.
     - [ ] Ensure it renders within the `MainLayout` and respects the aspect-ratio CSS.
 - [ ] Task: Conductor - User Manual Verification 'Core Components & Layout' (Protocol in workflow.md)
