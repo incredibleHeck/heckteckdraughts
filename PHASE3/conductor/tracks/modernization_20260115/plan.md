@@ -1,6 +1,6 @@
 # Implementation Plan - Modernization - Initialize React + TypeScript + Vite Scaffold
 
-## Phase 1: Environment & Scaffold
+## Phase 1: Environment & Scaffold [checkpoint: 9ff85c4]
 - [x] Task: Initialize Vite project with React and TypeScript templates. (342a84f)
     - [ ] Initialize project using `npm create vite@latest . -- --template react-ts`.
     - [ ] Install dependencies (`npm install`).
@@ -10,7 +10,7 @@
     - [ ] Copy `assets/images/` to `src/assets/images/` or `public/images/`.
     - [ ] specific: Copy `css/style.css` content to `src/index.css` and refactor for modern React (e.g., :root variables).
     - [ ] Install and configure `classnames` or `clsx` for cleaner class management (optional but recommended).
-- [~] Task: Conductor - User Manual Verification 'Environment & Scaffold' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Environment & Scaffold' (Protocol in workflow.md) (9ff85c4)
 
 ## Phase 2: Core Components & Layout
 - [ ] Task: Implement Global Layout.
