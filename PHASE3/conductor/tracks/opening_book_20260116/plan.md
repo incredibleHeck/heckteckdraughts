@@ -13,11 +13,11 @@
     - [x] Verify variation following (e.g., move 2, 3).
 - [ ] Task: Conductor - User Manual Verification 'Logic Port & Translation' (Protocol in workflow.md)
 
-## Phase 2: Engine Integration
+## Phase 2: Engine Integration [checkpoint: ec42660]
 - [x] Task: Integrate Book into `SearchEngine`. (5aea3c6)
     - [x] Update `src/engine/ai-search/search-engine.ts` to consult the `OpeningBook` singleton.
     - [x] Ensure iterative deepening loop is bypassed if a book move is found.
 - [x] Task: Final Verification. (5aea3c6)
     - [x] Verify in-browser console that "Opening Book Active" message appears.
     - [x] Confirm AI plays instantly in the first few moves.
-- [ ] Task: Conductor - User Manual Verification 'Engine Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Engine Integration' (Protocol in workflow.md) (ec42660)
