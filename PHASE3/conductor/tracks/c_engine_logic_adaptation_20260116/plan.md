@@ -37,6 +37,6 @@
 - [x] Task: Benchmarking and Regression Testing. ce0d43b
     - [ ] Compare search depth and nps between old and new AI versions.
     - [ ] Verify no regressions in standard move execution.
-- [ ] Task: Cleanup and Documentation.
+- [x] Task: Cleanup and Documentation. 67b3669
     - [ ] Document the ported algorithms and their origins from the C engine.
 - [ ] Task: Conductor - User Manual Verification 'Final Integration & Performance Tuning' (Protocol in workflow.md)
