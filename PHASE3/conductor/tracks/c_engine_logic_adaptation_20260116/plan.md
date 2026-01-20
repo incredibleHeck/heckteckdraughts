@@ -28,7 +28,7 @@
     - [ ] Create `src/engine/ai-search/pn-search.ts`.
     - [ ] Write failing tests for simple 3-piece endgame solutions in `src/engine/ai-search/pn-search.test.ts`.
     - [ ] Implement PN-Search logic.
-- [ ] Task: Integrate PN-Search into Search Engine.
+- [x] Task: Integrate PN-Search into Search Engine. ed10ee1
     - [ ] Update `src/engine/ai-search/search-engine.ts` to trigger PN-search when piece count is low.
     - [ ] Verify seamless transition from Negamax to PN-solver.
 - [ ] Task: Conductor - User Manual Verification 'Endgame Solver (PN-Search)' (Protocol in workflow.md)
