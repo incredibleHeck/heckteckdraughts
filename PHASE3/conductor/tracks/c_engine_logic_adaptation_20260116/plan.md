@@ -22,16 +22,16 @@
     - [x] Implement NMP in `NegamaxSearch`.
 - [x] Task: Conductor - User Manual Verification 'Advanced Search Pruning' (Protocol in workflow.md) d459763
 
-## Phase 3: Endgame Solver (PN-Search)
+## Phase 3: Endgame Solver (PN-Search) [checkpoint: 6fca557]
 - [x] Task: Port PN-Search Core. 1f40c93
-    - [ ] Analyze `PNsearch.c` to understand the node structure and proof/disproof number updates.
-    - [ ] Create `src/engine/ai-search/pn-search.ts`.
-    - [ ] Write failing tests for simple 3-piece endgame solutions in `src/engine/ai-search/pn-search.test.ts`.
-    - [ ] Implement PN-Search logic.
+    - [x] Analyze `PNsearch.c` to understand the node structure and proof/disproof number updates.
+    - [x] Create `src/engine/ai-search/pn-search.ts`.
+    - [x] Write failing tests for simple 3-piece endgame solutions in `src/engine/ai-search/pn-search.test.ts`.
+    - [x] Implement PN-Search logic.
 - [x] Task: Integrate PN-Search into Search Engine. ed10ee1
-    - [ ] Update `src/engine/ai-search/search-engine.ts` to trigger PN-search when piece count is low.
-    - [ ] Verify seamless transition from Negamax to PN-solver.
-- [ ] Task: Conductor - User Manual Verification 'Endgame Solver (PN-Search)' (Protocol in workflow.md)
+    - [x] Update `src/engine/ai-search/search-engine.ts` to trigger PN-search when piece count is low.
+    - [x] Verify seamless transition from Negamax to PN-solver.
+- [x] Task: Conductor - User Manual Verification 'Endgame Solver (PN-Search)' (Protocol in workflow.md) 6fca557
 
 ## Phase 4: Final Integration & Performance Tuning
 - [ ] Task: Benchmarking and Regression Testing.
