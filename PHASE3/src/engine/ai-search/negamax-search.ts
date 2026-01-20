@@ -6,6 +6,7 @@ import {
   generateMoves,
   makeMove,
   generatePositionKey,
+  shouldPromote,
   Move,
 } from "../ai/ai.utils";
 import { PositionEvaluator } from "../ai-evaluation/position-evaluator";
@@ -86,7 +87,22 @@ export class NegamaxSearch {
       if (i === 0) {
         score = -this.search(newPos, depth - 1, -beta, -alpha, ply + 1);
       } else {
-        score = -this.search(newPos, depth - 1, -alpha - 1, -alpha, ply + 1);
+        // Late Move Reductions (LMR)
+        let reduction = 0;
+        if (depth >= 3 && i >= 3 && move.captures.length === 0) {
+           const isPromotion = shouldPromote(position.pieces[move.from.row][move.from.col], move.to.row);
+           if (!isPromotion) {
+             reduction = 1;
+             if (depth > 6) reduction = 2;
+           }
+        }
+
+        score = -this.search(newPos, depth - 1 - reduction, -alpha - 1, -alpha, ply + 1);
+
+        // Re-search if LMR fails (score > alpha) or if we need PVS re-search
+        if (reduction > 0 && score > alpha) {
+            score = -this.search(newPos, depth - 1, -alpha - 1, -alpha, ply + 1);
+        }
 
         if (score > alpha && score < beta) {
           score = -this.search(newPos, depth - 1, -beta, -alpha, ply + 1);
