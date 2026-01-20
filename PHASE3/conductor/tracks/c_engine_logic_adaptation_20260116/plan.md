@@ -23,7 +23,7 @@
 - [x] Task: Conductor - User Manual Verification 'Advanced Search Pruning' (Protocol in workflow.md) d459763
 
 ## Phase 3: Endgame Solver (PN-Search)
-- [ ] Task: Port PN-Search Core.
+- [x] Task: Port PN-Search Core. 1f40c93
     - [ ] Analyze `PNsearch.c` to understand the node structure and proof/disproof number updates.
     - [ ] Create `src/engine/ai-search/pn-search.ts`.
     - [ ] Write failing tests for simple 3-piece endgame solutions in `src/engine/ai-search/pn-search.test.ts`.
