@@ -11,16 +11,16 @@
     - [x] Implement pattern scoring logic in `src/engine/ai-evaluation/pattern-evaluator.ts`.
 - [x] Task: Conductor - User Manual Verification 'Evaluation & Weights Porting' (Protocol in workflow.md)
 
-## Phase 2: Advanced Search Pruning
+## Phase 2: Advanced Search Pruning [checkpoint: d459763]
 - [x] Task: Implement Late Move Reductions (LMR). c4f9066
-    - [ ] Analyze `search.c` for LMR logic and reduction tables.
-    - [ ] Write failing tests in `src/engine/ai-search/negamax-search.test.ts` to verify deeper search at same time limit.
-    - [ ] Implement LMR in `NegamaxSearch` within `src/engine/ai-search/negamax-search.ts`.
+    - [x] Analyze `search.c` for LMR logic and reduction tables.
+    - [x] Write failing tests in `src/engine/ai-search/negamax-search.test.ts` to verify deeper search at same time limit.
+    - [x] Implement LMR in `NegamaxSearch` within `src/engine/ai-search/negamax-search.ts`.
 - [x] Task: Enhanced Null Move Pruning (NMP). ef56d60
-    - [ ] Extract adaptive null-move R values from C engine logic.
-    - [ ] Write failing tests for NMP safety.
-    - [ ] Implement NMP in `NegamaxSearch`.
-- [ ] Task: Conductor - User Manual Verification 'Advanced Search Pruning' (Protocol in workflow.md)
+    - [x] Extract adaptive null-move R values from C engine logic.
+    - [x] Write failing tests for NMP safety.
+    - [x] Implement NMP in `NegamaxSearch`.
+- [x] Task: Conductor - User Manual Verification 'Advanced Search Pruning' (Protocol in workflow.md) d459763
 
 ## Phase 3: Endgame Solver (PN-Search)
 - [ ] Task: Port PN-Search Core.
