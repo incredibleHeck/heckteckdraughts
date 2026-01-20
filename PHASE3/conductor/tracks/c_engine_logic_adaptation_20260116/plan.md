@@ -34,7 +34,7 @@
 - [x] Task: Conductor - User Manual Verification 'Endgame Solver (PN-Search)' (Protocol in workflow.md) 6fca557
 
 ## Phase 4: Final Integration & Performance Tuning
-- [ ] Task: Benchmarking and Regression Testing.
+- [x] Task: Benchmarking and Regression Testing. ce0d43b
     - [ ] Compare search depth and nps between old and new AI versions.
     - [ ] Verify no regressions in standard move execution.
 - [ ] Task: Cleanup and Documentation.
