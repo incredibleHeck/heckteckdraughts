@@ -1,5 +1,10 @@
 /**
- * Proof-Number Search (PNS) for endgame solving
+ * Proof-Number Search (PNS) for endgame solving.
+ * 
+ * Ported and adapted from the 'PNsearch.c' of the original C-engine.
+ * PNS is a best-first search algorithm that excels at solving games 
+ * with a small number of remaining pieces by focusing on proving 
+ * or disproving a specific outcome (win/loss).
  */
 import { Position } from "../../utils/fen-parser";
 import { generateMoves, makeMove, Move, PLAYER } from "../ai/ai.utils";

@@ -1,5 +1,9 @@
 /**
  * Ruthless Negamax Search (PVS Implementation)
+ * 
+ * Features advanced pruning techniques adapted from the original C-engine:
+ * - Late Move Reductions (LMR): Reduces search depth for non-promising moves.
+ * - Enhanced Null Move Pruning (NMP): Quickly prunes branches where the current player's position is overly dominant.
  */
 
 import {
