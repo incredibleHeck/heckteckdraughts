@@ -12,7 +12,7 @@
 - [x] Task: Conductor - User Manual Verification 'Evaluation & Weights Porting' (Protocol in workflow.md)
 
 ## Phase 2: Advanced Search Pruning
-- [ ] Task: Implement Late Move Reductions (LMR).
+- [x] Task: Implement Late Move Reductions (LMR). c4f9066
     - [ ] Analyze `search.c` for LMR logic and reduction tables.
     - [ ] Write failing tests in `src/engine/ai-search/negamax-search.test.ts` to verify deeper search at same time limit.
     - [ ] Implement LMR in `NegamaxSearch` within `src/engine/ai-search/negamax-search.ts`.
