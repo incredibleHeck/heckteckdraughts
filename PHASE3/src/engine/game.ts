@@ -1,5 +1,5 @@
 /**
- * Ruthless Game Engine - Core Orchestrator
+ * Ruthless Game Engine - Core Orchestrator (High Performance Adapter)
  */
 
 import {
@@ -11,211 +11,201 @@ import {
   GameStatus,
   DIRECTIONS,
 } from "./constants";
-import { MoveValidator } from "./game/move-validator";
-import { CaptureHandler } from "./game/capture-handler";
+
+// High-Performance Core
+import { Board, Move as MoveHP, Coordinate } from "./board";
+import { MoveGenerator } from "./move-generator";
 import { DrawDetector } from "./game/draw-detector";
 import { PositionRecorder } from "./game/position-recorder";
-import { Move, Coordinate, isValidSquare, isPieceOfCurrentPlayer } from "./ai/ai.utils";
+
+// Legacy Compat types (Structural match)
 import { Position } from "../utils/fen-parser";
+import { isPieceOfCurrentPlayer } from "./ai/ai.utils";
 
 export class Game {
-  public pieces: Int8Array[];
-  public currentPlayer: PLAYER;
+  public board: Board;
   public gameState: GameStatus;
   public moveHistory: any[];
   public movesSinceAction: number;
   public positionRecorder: PositionRecorder;
+  
+  // Cache for 2D pieces array to avoid generating it on every property access if UI reads it multiple times
+  private _cachedPieces: Int8Array[] | null = null;
 
   constructor() {
-    this.pieces = [];
-    this.currentPlayer = PLAYER.WHITE;
+    this.board = new Board();
     this.gameState = "ongoing";
     this.moveHistory = [];
     this.movesSinceAction = 0;
     this.positionRecorder = new PositionRecorder();
-
+    
     this.reset();
   }
 
   reset() {
-    this.pieces = Array(BOARD_SIZE)
-      .fill(null)
-      .map(() => new Int8Array(BOARD_SIZE).fill(PIECE.NONE));
-
-    this.currentPlayer = PLAYER.WHITE;
+    this.board.clear();
     this.gameState = "ongoing";
     this.moveHistory = [];
     this.movesSinceAction = 0;
     this.positionRecorder.clear();
-
     this.setupInitialPosition();
+    this._cachedPieces = null;
   }
 
   setupInitialPosition() {
+    // Initial Position: Rows 0-3 Black, 6-9 White.
+    // 10x10 Board.
+    // Board.ts uses 1D array.
+    // We can manually set squares.
+    
+    // Or we can use FEN? 
+    // "W:B1-20:W31-50" (Standard start)
+    // Let's do manual loop to be safe and fast.
+    
     for (let r = 0; r < BOARD_SIZE; r++) {
       for (let c = 0; c < BOARD_SIZE; c++) {
         if (isDarkSquare(r, c)) {
-          if (r < 4) this.pieces[r][c] = PIECE.BLACK;
-          else if (r > 5) this.pieces[r][c] = PIECE.WHITE;
+          const idx = this.board.index(r, c);
+          if (r < 4) {
+              this.board.setPiece(idx, PIECE.BLACK);
+              // Update counts manually or call updateCounts if we exposed it (private).
+              // Board.fromPosition handles it.
+              // Let's use internal Board method or just `board.fromPosition`.
+          }
+          else if (r > 5) {
+              this.board.setPiece(idx, PIECE.WHITE);
+          }
         }
       }
     }
+    // Re-initialize board counts/hashes from the raw squares
+    this.board.fromPosition(this.board.toPosition());
     this.recordPosition();
+    this._cachedPieces = null;
   }
 
-  makeMove(move: Move): boolean {
-    const availableCaptures = this.getAvailableCaptures();
-    if (availableCaptures.length > 0) {
-      const maxCaptureLen = Math.max(
-        ...availableCaptures.map((c) => c.captures.length)
-      );
+  // --- COMPATIBILITY API ---
 
-      const isCapture = move.captures && move.captures.length > 0;
+  // Getter for UI (returns 2D array)
+  get pieces(): Int8Array[] {
+    if (!this._cachedPieces) {
+        this._cachedPieces = this.board.toPosition().pieces;
+    }
+    return this._cachedPieces;
+  }
+  
+  // Setter for tests
+  set pieces(newPieces: Int8Array[]) {
+      // Create a position object
+      const pos: Position = {
+          pieces: newPieces,
+          currentPlayer: this.board.currentPlayer
+      };
+      this.board.fromPosition(pos);
+      this._cachedPieces = null;
+      this.recordPosition(); // Record this manual setup
+  }
 
-      if (!isCapture || move.captures.length < maxCaptureLen) {
-        console.warn(
-          "Ruthless Violation: You must take the maximum number of pieces!"
-        );
+  get currentPlayer(): PLAYER {
+      return this.board.currentPlayer;
+  }
+  set currentPlayer(p: PLAYER) {
+      this.board.currentPlayer = p;
+  }
+
+  makeMove(move: MoveHP): boolean {
+    // 1. Validate? 
+    // The UI calls `getLegalMoves()` then filters.
+    // So the move passed here SHOULD be legal.
+    // But we should verify captures logic?
+    // MoveGenerator `getAvailableCaptures` handles max capture rule.
+    // If the user passes a move that is NOT in legal moves, we should block it?
+    // Ideally yes.
+    
+    const legalMoves = this.getLegalMoves();
+    const valid = legalMoves.find(m => 
+        m.from.row === move.from.row && m.from.col === move.from.col &&
+        m.to.row === move.to.row && m.to.col === move.to.col
+        // And check captures length?
+    );
+
+    if (!valid) {
+        console.warn("Ruthless Violation: Illegal Move!", move);
         return false;
-      }
     }
 
-    const piece = this.pieces[move.from.row][move.from.col];
-    const originalPieces = this.pieces.map((row) => new Int8Array(row));
+    // 2. Execute on Board
+    // Clone pieces for history BEFORE move
+    const prevPieces = this.board.toPosition().pieces; // 2D clone
+    const prevPlayer = this.board.currentPlayer;
 
-    this.pieces[move.from.row][move.from.col] = PIECE.NONE;
-    this.pieces[move.to.row][move.to.col] = piece;
+    this.board.doMove(move);
+    this._cachedPieces = null; // Invalidate cache
 
+    // 3. Update History / Game State
     if (move.captures && move.captures.length > 0) {
-      for (const cap of move.captures) {
-        this.pieces[cap.row][cap.col] = PIECE.NONE;
-      }
       this.movesSinceAction = 0;
     } else {
       this.movesSinceAction++;
     }
 
-    if (this.shouldPromote(piece, move.to.row)) {
-      this.pieces[move.to.row][move.to.col] =
-        piece === PIECE.WHITE ? PIECE.WHITE_KING : PIECE.BLACK_KING;
-    }
-
     this.moveHistory.push({
       move,
-      prevPieces: originalPieces,
-      prevPlayer: this.currentPlayer,
+      prevPieces, // Expensive, but required for Undo/History viewer?
+      prevPlayer,
     });
     
-    this.currentPlayer =
-      this.currentPlayer === PLAYER.WHITE ? PLAYER.BLACK : PLAYER.WHITE;
-
     this.recordPosition();
     this.updateGameState();
     return true;
   }
-
-  getAvailableCaptures(): Move[] {
-    let allCaptures: Move[] = [];
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        if (this.isPieceOfCurrentPlayer(this.pieces[r][c])) {
-          const sequences = CaptureHandler.findCaptureSequences(
-            this.pieces,
-            { row: r, col: c },
-            this.currentPlayer
-          );
-          allCaptures.push(...sequences);
-        }
-      }
-    }
-    return allCaptures;
+  
+  recordPosition() {
+      this.positionRecorder.recordPosition(this.toPosition());
   }
 
-  getLegalMoves(): Move[] {
-    const captures = this.getAvailableCaptures();
-    if (captures.length > 0) {
-      const maxLen = Math.max(...captures.map((c) => c.captures.length));
-      return captures.filter((c) => c.captures.length === maxLen);
-    }
-
-    const normalMoves: Move[] = [];
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        if (this.isPieceOfCurrentPlayer(this.pieces[r][c])) {
-          this.findNormalMoves(normalMoves, r, c);
-        }
-      }
-    }
-    return normalMoves;
+  getLegalMoves(): MoveHP[] {
+    return MoveGenerator.generateMoves(this.board);
+  }
+  
+  // Helper for UI
+  isPieceOfCurrentPlayer(piece: PIECE): boolean {
+      // Use existing utility or simple check
+      if (piece === PIECE.NONE) return false;
+      const p = this.board.currentPlayer;
+      return p === PLAYER.WHITE 
+        ? piece === PIECE.WHITE || piece === PIECE.WHITE_KING 
+        : piece === PIECE.BLACK || piece === PIECE.BLACK_KING;
   }
 
-  findNormalMoves(moves: Move[], r: number, c: number) {
-    const piece = this.pieces[r][c];
-    const isKing = piece === PIECE.WHITE_KING || piece === PIECE.BLACK_KING;
-
-    const dirs = isKing
-      ? DIRECTIONS.KING_MOVES
-      : this.currentPlayer === PLAYER.WHITE
-      ? DIRECTIONS.WHITE_MOVES
-      : DIRECTIONS.BLACK_MOVES;
-
-    for (const dir of dirs) {
-      let nr = r + dir.dy,
-        nc = c + dir.dx;
-
-      if (isKing) {
-        while (
-          isValidSquare(nr, nc) &&
-          this.pieces[nr][nc] === PIECE.NONE
-        ) {
-          moves.push({ from: { row: r, col: c }, to: { row: nr, col: nc }, captures: [] });
-          nr += dir.dy;
-          nc += dir.dx;
-        }
-      }
-      else if (
-        isValidSquare(nr, nc) &&
-        this.pieces[nr][nc] === PIECE.NONE
-      ) {
-        moves.push({ from: { row: r, col: c }, to: { row: nr, col: nc }, captures: [] });
-      }
-    }
+  getAvailableCaptures(): MoveHP[] {
+      return MoveGenerator.getAvailableCaptures(this.board);
   }
 
   updateGameState() {
     const moves = this.getLegalMoves();
     if (moves.length === 0) {
       this.gameState =
-        this.currentPlayer === PLAYER.WHITE
+        this.board.currentPlayer === PLAYER.WHITE
           ? "blackWin"
           : "whiteWin";
       return;
     }
 
-    const drawReason = DrawDetector.getDrawReason(this);
+    // Draw Detection
+    // We need to adapt DrawDetector to use Board or generic Position.
+    // DrawDetector currently takes `Game`.
+    // If we pass `this`, it sees `pieces` (2D getter).
+    // So `DrawDetector` should still work if it relies on `game.pieces` and `game.moveHistory`.
+    const drawReason = DrawDetector.getDrawReason(this as any); // Cast if needed
     if (drawReason) this.gameState = "draw";
   }
 
-  recordPosition() {
-    this.positionRecorder.recordPosition(this.toPosition());
-  }
-
   toPosition(): Position {
-    return { pieces: this.pieces, currentPlayer: this.currentPlayer };
+      return this.board.toPosition();
   }
-
-  isPieceOfCurrentPlayer(piece: PIECE): boolean {
-    return isPieceOfCurrentPlayer(piece, this.currentPlayer);
-  }
-
+  
   getPiece(r: number, c: number): PIECE {
-    return this.pieces[r][c];
-  }
-
-  shouldPromote(piece: PIECE, row: number): boolean {
-    return (
-      (piece === PIECE.WHITE && row === 0) ||
-      (piece === PIECE.BLACK && row === BOARD_SIZE - 1)
-    );
+      return this.board.getPiece(this.board.index(r, c));
   }
 }

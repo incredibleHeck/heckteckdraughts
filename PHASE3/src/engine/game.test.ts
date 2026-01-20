@@ -38,62 +38,20 @@ describe('Game Engine', () => {
   });
 
   it('should enforce majority capture rule', () => {
-    // Set up a position with two capture options
-    game.pieces = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
+    // Construct board array first
+    const p = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
     
-    // White at 47
-    game.pieces[9][5] = PIECE.WHITE;
-    // Black at 42, 32
-    game.pieces[8][4] = PIECE.BLACK;
-    game.pieces[6][6] = PIECE.BLACK;
-    // Black at 38
-    game.pieces[7][5] = PIECE.BLACK;
+    // White at 32 (6,6)
+    p[6][6] = PIECE.WHITE;
+    // Black at 27 (5,7) and 28 (5,5)
+    p[5][7] = PIECE.BLACK;
+    p[5][5] = PIECE.BLACK;
+    // Black at 18 (3,5)
+    p[3][5] = PIECE.BLACK;
     
+    // Push to game
+    game.pieces = p;
     game.currentPlayer = PLAYER.WHITE;
-    
-    // Option 1: 1 capture
-    const smallMove = {
-      from: { row: 9, col: 5 },
-      to: { row: 7, col: 7 },
-      captures: [{ row: 8, col: 6 }] // Wait, coords for 38...
-    };
-    // Coords for 38: (7, 5). Coords for 42: (8, 4). Coords for 32: (6, 6).
-    
-    // Let's re-verify coords for Flipped board in Row 7 (36-40)
-    // col 9:36, 7:37, 5:38, 3:39, 1:40
-    // So 38 is (7, 5). Correct.
-    
-    // Coords for 42: Row 8 (41-45)
-    // col 8:41, 6:42, 4:43, 2:44, 0:45
-    // So 42 is (8, 6).
-    
-    // Coords for 32: Row 6 (31-35)
-    // col 8:31, 6:32, 4:33, 2:34, 0:35
-    // So 32 is (6, 6).
-    
-    game.pieces = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
-    game.pieces[9][5] = PIECE.WHITE; // 48? Wait.
-    // Row 9: col 9:46, 7:47, 5:48, 3:49, 1:50.
-    // So 47 is (9, 7).
-    
-    game.pieces[9][7] = PIECE.WHITE; // 47
-    game.pieces[8][6] = PIECE.BLACK; // 42
-    game.pieces[6][6] = PIECE.BLACK; // 32
-    game.pieces[7][5] = PIECE.BLACK; // 38
-    
-    // Available Captures:
-    // 47x38 (1 cap)
-    // 47x33x22 (2 caps) -- wait, 42 is at (8,6). Jump 47x37 is not capture.
-    
-    // Let's use simple ones.
-    // White at 32 (6,6). Black at 27 (5,7) and 18 (3,7).
-    game.pieces = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
-    game.pieces[6][6] = PIECE.WHITE; // 32
-    game.pieces[5][7] = PIECE.BLACK; // 27
-    game.pieces[3][7] = PIECE.BLACK; // 18
-    
-    // Black at 28 (5,5).
-    game.pieces[5][5] = PIECE.BLACK; // 28
     
     // Option A: 32x21 (1 cap)
     const moveA = {
@@ -102,11 +60,11 @@ describe('Game Engine', () => {
       captures: [{ row: 5, col: 7 }]
     };
     
-    // Option B: 32x23x12 (2 caps)
+    // Option B: 32x22x13 (2 caps)
     const moveB = {
       from: { row: 6, col: 6 },
-      to: { row: 2, col: 8 },
-      captures: [{ row: 5, col: 5 }, { row: 3, col: 7 }]
+      to: { row: 2, col: 6 },
+      captures: [{ row: 5, col: 5 }, { row: 3, col: 5 }]
     };
     
     expect(game.makeMove(moveA)).toBe(false); // Violates majority capture
@@ -114,41 +72,54 @@ describe('Game Engine', () => {
   });
 
   it('should detect a draw by repetition', () => {
-    // Starting position
-    const move1 = { from: { row: 6, col: 8 }, to: { row: 5, col: 9 }, captures: [] }; // 31-26
-    const move2 = { from: { row: 3, col: 1 }, to: { row: 4, col: 0 }, captures: [] }; // 20-25
-    const move3 = { from: { row: 5, col: 9 }, to: { row: 6, col: 8 }, captures: [] }; // 26-31
-    const move4 = { from: { row: 4, col: 0 }, to: { row: 3, col: 1 }, captures: [] }; // 25-20
+    const p = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
+    p[0][0] = PIECE.WHITE_KING; // 1
+    p[9][1] = PIECE.BLACK_KING; // 46
+    
+    game.pieces = p;
+    game.currentPlayer = PLAYER.WHITE;
+    
+    // Move 1: White 0,0 -> 1,1
+    const w1 = { from: { row: 0, col: 0 }, to: { row: 1, col: 1 }, captures: [] };
+    // Move 2: Black 9,1 -> 8,2
+    const b1 = { from: { row: 9, col: 1 }, to: { row: 8, col: 2 }, captures: [] };
+    // Move 3: White 1,1 -> 0,0
+    const w2 = { from: { row: 1, col: 1 }, to: { row: 0, col: 0 }, captures: [] };
+    // Move 4: Black 8,2 -> 9,1
+    const b2 = { from: { row: 8, col: 2 }, to: { row: 9, col: 1 }, captures: [] };
 
     // Repeat 3 times
-    for (let i = 0; i < 2; i++) {
-      game.makeMove(move1);
-      game.makeMove(move2);
-      game.makeMove(move3);
-      game.makeMove(move4);
-    }
+    // 1
+    expect(game.makeMove(w1)).toBe(true);
+    expect(game.makeMove(b1)).toBe(true);
+    expect(game.makeMove(w2)).toBe(true);
+    expect(game.makeMove(b2)).toBe(true);
+    
+    // 2
+    game.makeMove(w1);
+    game.makeMove(b1);
+    game.makeMove(w2);
+    game.makeMove(b2);
     
     // 3rd time
-    game.makeMove(move1);
-    game.makeMove(move2);
-    game.makeMove(move3);
-    game.makeMove(move4);
-
+    game.makeMove(w1);
+    game.makeMove(b1);
+    game.makeMove(w2);
+    game.makeMove(b2);
+    
     expect(game.gameState).toBe('draw');
   });
 
   it('should detect a win when no moves are left', () => {
     // Clear board
-    game.pieces = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
-    // White man about to be blocked or has no moves
-    game.pieces[0][0] = PIECE.WHITE;
-    game.pieces[1][1] = PIECE.BLACK_KING; // Blocked? No, jump exists.
+    const p = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
+    // Black piece only
+    p[5][5] = PIECE.BLACK;
     
-    // Simpler: White has no pieces
-    game.pieces = Array(10).fill(null).map(() => new Int8Array(10).fill(PIECE.NONE));
-    game.pieces[5][5] = PIECE.BLACK;
+    game.pieces = p;
     game.currentPlayer = PLAYER.WHITE;
     game.updateGameState();
+    
     expect(game.gameState).toBe('blackWin');
   });
 });

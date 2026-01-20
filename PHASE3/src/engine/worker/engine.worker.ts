@@ -3,7 +3,7 @@
  * Handles AI search on a background thread.
  */
 
-import { SearchEngine } from "../ai-search/search-engine";
+import { SearchEngine } from "../search";
 import { Position } from "../../utils/fen-parser";
 
 let engine: SearchEngine | null = null;
