@@ -1,15 +1,15 @@
 # Implementation Plan - C Engine Logic Adaptation
 
-## Phase 1: Evaluation & Weights Porting
+## Phase 1: Evaluation & Weights Porting [checkpoint: be46be6]
 - [x] Task: Extract and Port Evaluation Weights. (cb89005)
-    - [ ] Analyze `eval.c` and `learn.c` in the C engine to identify weight tables.
-    - [ ] Implement a weight normalization utility to map C-engine values to our `PositionEvaluator`.
-    - [ ] Update `src/engine/ai-evaluation/material-evaluator.ts` with new weights.
+    - [x] Analyze `eval.c` and `learn.c` in the C engine to identify weight tables.
+    - [x] Implement a weight normalization utility to map C-engine values to our `PositionEvaluator`.
+    - [x] Update `src/engine/ai-evaluation/material-evaluator.ts` with new weights.
 - [x] Task: Implement Pattern-Based Evaluation. f02e4ae
     - [x] Study `patsearch.c` to identify key draughts patterns (e.g., bridge, hook, center control).
     - [x] Write failing tests for pattern recognition in `src/engine/ai-evaluation/pattern-evaluator.test.ts`.
     - [x] Implement pattern scoring logic in `src/engine/ai-evaluation/pattern-evaluator.ts`.
-- [ ] Task: Conductor - User Manual Verification 'Evaluation & Weights Porting' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Evaluation & Weights Porting' (Protocol in workflow.md)
 
 ## Phase 2: Advanced Search Pruning
 - [ ] Task: Implement Late Move Reductions (LMR).
