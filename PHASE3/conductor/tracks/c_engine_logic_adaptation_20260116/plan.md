@@ -33,10 +33,10 @@
     - [x] Verify seamless transition from Negamax to PN-solver.
 - [x] Task: Conductor - User Manual Verification 'Endgame Solver (PN-Search)' (Protocol in workflow.md) 6fca557
 
-## Phase 4: Final Integration & Performance Tuning
+## Phase 4: Final Integration & Performance Tuning [checkpoint: 2dbaecb]
 - [x] Task: Benchmarking and Regression Testing. ce0d43b
-    - [ ] Compare search depth and nps between old and new AI versions.
-    - [ ] Verify no regressions in standard move execution.
+    - [x] Compare search depth and nps between old and new AI versions.
+    - [x] Verify no regressions in standard move execution.
 - [x] Task: Cleanup and Documentation. 67b3669
-    - [ ] Document the ported algorithms and their origins from the C engine.
-- [ ] Task: Conductor - User Manual Verification 'Final Integration & Performance Tuning' (Protocol in workflow.md)
+    - [x] Document the ported algorithms and their origins from the C engine.
+- [x] Task: Conductor - User Manual Verification 'Final Integration & Performance Tuning' (Protocol in workflow.md) 2dbaecb
