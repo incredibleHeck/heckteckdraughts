@@ -10,7 +10,7 @@
 - **State Management:** React Context API (for UI state) and modular engine state.
 - **Computation:** Web Workers for non-blocking AI/Engine calculations.
 - **Engine Architecture:** Mutable High-Performance Board (Make/Unmake pattern) with Incremental Zobrist Hashing for O(1) state updates.
-- **Rendering:** React-based DOM with GPU-accelerated CSS Transforms for piece animations.
+- **Rendering:** React-based DOM with GPU-accelerated CSS Transforms (translate3d) for piece animations.
 - **Communication:** Decoupled event-driven architecture between UI and Engine.
 
 ## Development Tools
