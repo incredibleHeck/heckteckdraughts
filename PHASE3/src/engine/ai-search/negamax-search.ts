@@ -5,8 +5,10 @@
 import {
   generateMoves,
   makeMove,
+  makeNullMove,
   generatePositionKey,
   shouldPromote,
+  countPieces,
   Move,
 } from "../ai/ai.utils";
 import { PositionEvaluator } from "../ai-evaluation/position-evaluator";
@@ -65,6 +67,28 @@ export class NegamaxSearch {
         if (alpha >= beta) return entry.score;
       }
       if (entry) ttMove = entry.bestMove;
+    }
+
+    // Null Move Pruning (NMP)
+    if (depth >= 3 && beta < 10000) {
+        const staticEval = this.evaluator.evaluatePosition(position);
+        if (staticEval >= beta) {
+            const counts = countPieces(position);
+            // Simple endgame detection: if total pieces < 6, avoid NMP to prevent zugzwang errors
+            const totalPieces = counts.whiteCount + counts.blackCount + counts.whiteKings + counts.blackKings;
+            
+            if (totalPieces > 6) {
+                const R = depth > 6 ? 3 : 2;
+                const nullMovePos = makeNullMove(position);
+                
+                // Zero-window search with reduced depth
+                const score = -this.search(nullMovePos, depth - 1 - R, -beta, -beta + 1, ply + 1);
+                
+                if (score >= beta) {
+                    return beta; // Pruned
+                }
+            }
+        }
     }
 
     let moves = generateMoves(position);

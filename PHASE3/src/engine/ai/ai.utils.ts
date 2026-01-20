@@ -81,6 +81,18 @@ export function makeMove(position: Position, move: Move): Position {
   };
 }
 
+export function makeNullMove(position: Position): Position {
+  const newPieces = new Array(BOARD_SIZE);
+  for (let r = 0; r < BOARD_SIZE; r++)
+    newPieces[r] = position.pieces[r].slice();
+
+  return {
+    pieces: newPieces,
+    currentPlayer:
+      position.currentPlayer === PLAYER.WHITE ? PLAYER.BLACK : PLAYER.WHITE,
+  };
+}
+
 // ============================================
 // MOVE GENERATION (OPTIMIZED)
 // ============================================

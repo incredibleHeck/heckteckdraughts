@@ -37,4 +37,16 @@ describe('NegamaxSearch with LMR', () => {
     // For now, I'll set it to a very low number to force a failure and see the actual count.
     expect(search.nodeCount).toBeLessThan(2300); 
   });
+
+  it('should visit fewer nodes with NMP enabled', () => {
+    const startFEN = 'W:W31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50:B1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20';
+    const pos = parseFEN(startFEN);
+    
+    search.resetStats();
+    search.search(pos, 5, -Infinity, Infinity);
+    
+    // With LMR alone, count is ~1047.
+    // NMP should reduce it further.
+    expect(search.nodeCount).toBeLessThan(1000);
+  });
 });
