@@ -16,7 +16,7 @@
     - [ ] Analyze `search.c` for LMR logic and reduction tables.
     - [ ] Write failing tests in `src/engine/ai-search/negamax-search.test.ts` to verify deeper search at same time limit.
     - [ ] Implement LMR in `NegamaxSearch` within `src/engine/ai-search/negamax-search.ts`.
-- [ ] Task: Enhanced Null Move Pruning (NMP).
+- [x] Task: Enhanced Null Move Pruning (NMP). ef56d60
     - [ ] Extract adaptive null-move R values from C engine logic.
     - [ ] Write failing tests for NMP safety.
     - [ ] Implement NMP in `NegamaxSearch`.
