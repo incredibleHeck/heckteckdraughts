@@ -19,7 +19,7 @@
 - **Testing:** Vitest (for engine and logic testing)
 
 - [x] **Styling:** Tailwind CSS + CSS Modules (for the Hectic Dark theme)
-- [x] **AI/Engine Logic:** Existing modular JavaScript/TypeScript logic, ported to TypeScript and running in Web Workers.
+- [x] **AI/Engine Logic:** Advanced logic ported from the C-engine, featuring PVS search, LMR/NMP pruning, and a Proof-Number Search endgame solver, running in Web Workers.
 - [x] **Build Tool:** Vite
 
 ---

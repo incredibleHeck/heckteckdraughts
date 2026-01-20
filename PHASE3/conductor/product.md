@@ -14,7 +14,7 @@ A professional-grade International Draughts (10x10) engine, re-architected as a 
 - **Modular Excellence:** Maintain a strict decoupled architecture (Controller-Handler-View) to ensure the engine remains extensible and the UI remains fluid.
 
 ## Key Features
-- **Advanced AI Engine:** A multi-layered AI using Minimax, Alpha-Beta pruning, and Web Worker-based non-blocking computation with customizable difficulty levels.
+- **Advanced AI Engine:** A multi-layered AI using PVS-Negamax with advanced search pruning (LMR, NMP), an integrated PN-Solver for perfect endgame play, and Web Worker-based non-blocking computation with customizable difficulty levels.
 - **Integrated Opening Book:** Deep integration with professional International Draughts opening theory from `openings.json`, allowing for instant and theoretically sound early-game play.
 - **Comprehensive Analysis Panel:** Real-time evaluation gauge, move history tracking, and search statistics (nodes, depth).
 - **Standards Support:** Full support for FEN (Forsyth-Edwards Notation) and PDN (Portable Draughts Notation) for importing and exporting game states and opening theory.
