@@ -1,0 +1,8 @@
+{
+  "track_id": "c_engine_logic_adaptation_20260116",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-16T08:14:00Z",
+  "updated_at": "2026-01-16T08:14:00Z",
+  "description": "Port and adapt advanced search, evaluation, and endgame logic from a C-based draughts engine to the TypeScript AI engine."
+}
