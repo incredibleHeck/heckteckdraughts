@@ -39,4 +39,14 @@ describe('SearchEngine', () => {
     expect(result.move?.to.row).toBe(4);
     expect(result.move?.captures.length).toBe(1);
   });
+
+  it('should use PN-Solver for endgames', async () => {
+    // White 32, Black 27. 2 pieces total. PN-Solver should find the win.
+    const fen = 'W:W32:B27';
+    const pos = parseFEN(fen);
+    
+    const result = await engine.findBestMove(pos, 4, 2000);
+    expect(result.formattedStats).toContain('PN-Solver');
+    expect(result.score).toBeGreaterThanOrEqual(10000);
+  });
 });
