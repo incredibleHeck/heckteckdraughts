@@ -26,7 +26,7 @@ Break the "God Component" (`App.tsx`) into manageable pieces.
 ## Phase 3: Visual Polish
 Implement true GPU acceleration for piece rendering.
 
-- [~] **Step 4: Optimize `Piece` Rendering**
+- [x] **Step 4: Optimize `Piece` Rendering**
     -   Update `Piece.tsx` to calculate `transform: translate(...)` strings based on row/col.
     -   Remove `top` / `left` positioning.
     -   Ensure `will-change: transform` is correctly applied.
@@ -34,6 +34,7 @@ Implement true GPU acceleration for piece rendering.
 
 ## Phase 4: Verification
 
-- [ ] **Step 5: Final System Check**
+- [x] **Step 5: Final System Check**
     -   Run full test suite.
     -   Manual playtest to ensure Game/AI/UI loop is unbroken.
+    -   [checkpoint: 70c26cd]
