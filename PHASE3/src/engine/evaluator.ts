@@ -4,8 +4,8 @@ import {
   POSITION_FIELDS, 
   CROWN_POSITIONAL, 
   POSITIONAL 
-} from "./ai-evaluation/eval.constants";
-import { getStageParameters } from "./ai-evaluation/weight-normalization";
+} from "./eval-constants";
+import { getStageParameters } from "./weight-normalization";
 
 // Weights
 const WEIGHT_MAN = 1000;

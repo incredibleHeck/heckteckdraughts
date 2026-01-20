@@ -8,7 +8,7 @@ import { useEngine } from '@/hooks/useEngine'
 import { Game } from '@/engine/game'
 import { Move, isSameMove } from '@/engine/ai/ai.utils'
 import { PLAYER, SQUARE_NUMBERS, BOARD_SIZE } from '@/engine/constants'
-import { AI_CONFIG } from '@/engine/ai/ai.constants'
+import { AI_CONFIG } from '@/engine/ai-config'
 
 function App() {
   // --- Game Settings State ---

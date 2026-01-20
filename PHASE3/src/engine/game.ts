@@ -20,7 +20,6 @@ import { PositionRecorder } from "./game/position-recorder";
 
 // Legacy Compat types (Structural match)
 import { Position } from "../utils/fen-parser";
-import { isPieceOfCurrentPlayer } from "./ai/ai.utils";
 
 export class Game {
   public board: Board;

@@ -1,4 +1,4 @@
-import { PARAM_A, PARAM_B, PARAM_C } from "./eval.constants";
+import { PARAM_A, PARAM_B, PARAM_C } from "./eval-constants";
 
 export interface StageParameters {
   connectionBase: number;

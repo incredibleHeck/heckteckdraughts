@@ -1,4 +1,5 @@
-import { BOARD_SIZE, PIECE } from "./constants";
+import { BOARD_SIZE, PIECE, PLAYER } from "./constants";
+import { Position } from "../utils/fen-parser";
 
 export interface ZobristKeys {
   [key: number]: number; // Maps PIECE enum to random number
@@ -30,4 +31,26 @@ export function getZobristTable(): ZobristTable {
     }));
   }
   return ZOBRIST_TABLE;
+}
+
+export function generatePositionKey(position: Position): number {
+  const table = getZobristTable();
+  let hash = 0;
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const piece = position.pieces[r][c];
+      if (piece !== PIECE.NONE) {
+        // Zobrist table is 1D (0..99)
+        const index = r * BOARD_SIZE + c;
+        hash ^= table[index][piece];
+      }
+    }
+  }
+  
+  if (position.currentPlayer === PLAYER.WHITE) {
+    hash ^= table[0]['SIDE_TO_MOVE'];
+  }
+
+  return hash;
 }

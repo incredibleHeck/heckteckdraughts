@@ -2,7 +2,7 @@
  * Ruthless Position Recorder
  */
 
-import { generatePositionKey } from "../ai/ai.utils";
+import { generatePositionKey } from "../zobrist";
 import { Position } from "../../utils/fen-parser";
 
 export class PositionRecorder {
