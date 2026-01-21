@@ -13,6 +13,8 @@ interface MainLayoutProps {
   onUserColorChange: (color: number) => void;
   majorityRule: boolean;
   onMajorityRuleChange: (enabled: boolean) => void;
+  onExportPDN: () => void;
+  onImportPDN: () => void;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ 
@@ -24,7 +26,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   userColor,
   onUserColorChange,
   majorityRule,
-  onMajorityRuleChange
+  onMajorityRuleChange,
+  onExportPDN,
+  onImportPDN
 }) => {
   return (
     <>
@@ -40,6 +44,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         onEditModeToggle={() => console.log('Edit Mode')}
         onImportFen={() => console.log('Import FEN')}
         onScreenshot={() => console.log('Screenshot')}
+        onExportPDN={onExportPDN}
+        onImportPDN={onImportPDN}
       />
       <PlayersBar />
       <div className="game-container">

@@ -4,6 +4,8 @@ import { useEngine } from './useEngine';
 import { AI_CONFIG } from '@/engine/ai-config';
 import { PLAYER, SQUARE_NUMBERS, BOARD_SIZE, PIECE } from '@/engine/constants';
 import { Move } from '@/engine/board';
+import { PDNGenerator } from '@/utils/pdn-generator';
+import { PDNParser } from '@/utils/pdn-parser';
 
 export const useGameController = () => {
   // --- Game Settings ---
@@ -51,6 +53,42 @@ export const useGameController = () => {
     setHighlights([]);
     setSelectedSquare(null);
     setEngineStats(null);
+  }, [game, refreshBoard]);
+
+  // --- PDN Handlers ---
+  const handleExportPDN = useCallback(() => {
+    const pdn = PDNGenerator.generate(game);
+    const blob = new Blob([pdn], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `game-${new Date().toISOString().split('T')[0]}.pdn`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [game]);
+
+  const handleImportPDN = useCallback(() => {
+    const input = window.prompt("Paste PDN data here:");
+    if (!input) return;
+
+    try {
+        const moves = PDNParser.parse(input);
+        game.reset();
+        
+        // Replay moves
+        // We need to execute moves on the game logic to ensure state/history is consistent
+        // PDNParser returns Move objects.
+        for (const move of moves) {
+            game.makeMove(move);
+        }
+        refreshBoard();
+        alert("Game loaded successfully!");
+    } catch (e) {
+        console.error(e);
+        alert("Failed to load PDN: " + (e as Error).message);
+    }
   }, [game, refreshBoard]);
 
   // --- Interaction Logic ---
@@ -165,6 +203,8 @@ export const useGameController = () => {
     
     // Actions
     handleSquareClick,
-    handleMoveAttempt
+    handleMoveAttempt,
+    handleExportPDN,
+    handleImportPDN
   };
 };

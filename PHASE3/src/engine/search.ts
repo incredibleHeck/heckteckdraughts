@@ -4,6 +4,7 @@ import { Evaluator } from "./evaluator";
 import { TranspositionTable, TTFlag } from "./tt";
 import { MoveOrderer } from "./move-orderer";
 import { Position } from "../utils/fen-parser";
+import { OpeningBook } from "./opening-book";
 
 export interface SearchResult {
   move: Move | null;
@@ -17,6 +18,7 @@ export class SearchEngine {
   public evaluator: Evaluator;
   public tt: TranspositionTable;
   public moveOrderer: MoveOrderer;
+  public openingBook: OpeningBook;
   
   private nodes = 0;
   private startTime = 0;
@@ -27,6 +29,7 @@ export class SearchEngine {
     this.evaluator = new Evaluator();
     this.tt = new TranspositionTable(64); // 64MB
     this.moveOrderer = new MoveOrderer();
+    this.openingBook = new OpeningBook();
   }
 
   reset() {
@@ -36,7 +39,8 @@ export class SearchEngine {
   async findBestMove(
       position: Position | Board, 
       maxDepth: number, 
-      timeLimit: number
+      timeLimit: number,
+      history: Move[] = []
   ): Promise<SearchResult> {
       let board: Board;
       if (position instanceof Board) {
@@ -49,6 +53,30 @@ export class SearchEngine {
       this.startTime = Date.now();
       this.timeLimit = timeLimit;
       this.stop = false;
+
+      // 1. Check Opening Book
+      const bookMove = this.openingBook.findMove(history);
+      if (bookMove) {
+          // Verify legality and get full capture info
+          const legalMoves = MoveGenerator.generateMoves(board);
+          const realMove = legalMoves.find(m => 
+              m.from.row === bookMove.from.row && 
+              m.from.col === bookMove.from.col &&
+              m.to.row === bookMove.to.row && 
+              m.to.col === bookMove.to.col
+          );
+          
+          if (realMove) {
+              console.log("[Search] Book Move Found:", realMove);
+              return {
+                  move: realMove,
+                  score: 0, // Book moves are assumed equal/good
+                  depth: 0,
+                  nodes: 0,
+                  timeMs: 0
+              };
+          }
+      }
 
       let bestMove: Move | null = null;
       let score = 0;

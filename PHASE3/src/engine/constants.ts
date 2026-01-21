@@ -51,6 +51,20 @@ export const SQUARE_NUMBERS: Int32Array = (function () {
   return numbers;
 })();
 
+export const REVERSE_SQUARE_MAP = (() => {
+  // Maps 1-50 to {r, c, index}
+  // index is 0..99
+  const map = new Map<number, { r: number; c: number; index: number }>();
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const index = r * BOARD_SIZE + c;
+      const num = SQUARE_NUMBERS[index];
+      if (num !== 0) map.set(num, { r, c, index });
+    }
+  }
+  return map;
+})();
+
 export interface Direction {
   dy: number;
   dx: number;

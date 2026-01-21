@@ -12,6 +12,8 @@ interface TopNavProps {
   onEditModeToggle: () => void;
   onImportFen: () => void;
   onScreenshot: () => void;
+  onExportPDN: () => void;
+  onImportPDN: () => void;
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -25,7 +27,9 @@ const TopNav: React.FC<TopNavProps> = ({
   onMajorityRuleChange,
   onEditModeToggle,
   onImportFen,
-  onScreenshot
+  onScreenshot,
+  onExportPDN,
+  onImportPDN
 }) => {
   return (
     <nav className="top-nav sticky top-0 z-50 w-full border-b border-white/10 bg-hectic-panel backdrop-blur-md">
@@ -86,6 +90,8 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          <button onClick={onExportPDN} className="nav-tab px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-sm transition-colors border border-white/10">💾 Save PDN</button>
+          <button onClick={onImportPDN} className="nav-tab px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-sm transition-colors border border-white/10">📂 Load PDN</button>
           <button onClick={onEditModeToggle} className="nav-tab px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-sm transition-colors border border-white/10">✏️ Edit</button>
           <button onClick={onImportFen} className="nav-tab px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-sm transition-colors border border-white/10">📥 FEN</button>
           <button onClick={onScreenshot} className="nav-tab px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-sm transition-colors border border-white/10">📸 Screenshot</button>

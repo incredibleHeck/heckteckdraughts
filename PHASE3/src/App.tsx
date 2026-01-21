@@ -21,7 +21,9 @@ function App() {
     isThinking,
     engineStats,
     handleSquareClick,
-    handleMoveAttempt
+    handleMoveAttempt,
+    handleExportPDN,
+    handleImportPDN
   } = useGameController();
 
   const translateMoveToNotation = (move: Move) => {
@@ -43,6 +45,8 @@ function App() {
         onUserColorChange={handleUserColorChange}
         majorityRule={majorityRule}
         onMajorityRuleChange={setMajorityRule}
+        onExportPDN={handleExportPDN}
+        onImportPDN={handleImportPDN}
       >
         <aside className="left-panel">
           <AnalysisPanel 

@@ -10,24 +10,13 @@ import {
   PLAYER,
   BOARD_SIZE,
   SQUARE_NUMBERS,
+  REVERSE_SQUARE_MAP
 } from "../engine/constants";
 
 export interface Position {
   pieces: Int8Array[];
   currentPlayer: PLAYER;
 }
-
-// Pre-calculated reverse lookup: SquareNumber -> {row, col}
-const REVERSE_SQUARE_MAP = (() => {
-  const map = new Map<number, { r: number; c: number }>();
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      const num = SQUARE_NUMBERS[r * BOARD_SIZE + c];
-      if (num !== 0) map.set(num, { r, c });
-    }
-  }
-  return map;
-})();
 
 /**
  * Validates and Parses a FEN string atomically
@@ -60,22 +49,35 @@ function _applySection(board: Int8Array[], section: string, isWhite: boolean) {
   if (section.length <= 1) return; // Only 'W' or 'B' with no pieces
 
   // Remove the leading 'W' or 'B' and split by comma
-  const pieces = section.substring(1).split(",");
+  const parts = section.substring(1).split(",");
 
-  for (const p of pieces) {
-    if (!p) continue;
+  for (const part of parts) {
+    if (!part) continue;
+    
+    // Handle Ranges (e.g. 31-50)
+    if (part.includes("-")) {
+      const [start, end] = part.split("-").map(s => parseInt(s));
+      for (let i = start; i <= end; i++) {
+        _setPiece(board, i.toString(), isWhite);
+      }
+    } else {
+      _setPiece(board, part, isWhite);
+    }
+  }
+}
+
+function _setPiece(board: Int8Array[], p: string, isWhite: boolean) {
     const isKing = p.includes("K");
     const num = parseInt(p);
     const coords = REVERSE_SQUARE_MAP.get(num);
 
-    if (!coords) continue;
+    if (!coords) return;
 
     if (isWhite) {
       board[coords.r][coords.c] = isKing ? PIECE.WHITE_KING : PIECE.WHITE;
     } else {
       board[coords.r][coords.c] = isKing ? PIECE.BLACK_KING : PIECE.BLACK;
     }
-  }
 }
 
 /**
