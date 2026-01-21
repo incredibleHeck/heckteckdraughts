@@ -5,3 +5,4 @@ This file tracks all major tracks for the project. Each track has its own detail
 ## Active Tracks
 
 | `project-detox` | **Project Detox** | Clean up legacy code, refactor App.tsx, and optimize UI rendering. | **[x] Completed** | [Plan](./tracks/project-detox/plan.md) |
+| `opening-book-pdn` | **Opening Book & PDN** | Integrate opening theory and add Import/Export functionality. | **[x] Completed** | [Plan](./tracks/opening-book-pdn/plan.md) |
