@@ -15,8 +15,8 @@ A professional-grade International Draughts (10x10) engine, re-architected as a 
 
 ## Key Features
 - **Advanced AI Engine:** A multi-layered AI using PVS-Negamax with advanced search pruning (LMR, NMP), an integrated PN-Solver for perfect endgame play, and Web Worker-based non-blocking computation with customizable difficulty levels.
-- **Integrated Opening Book:** Deep integration with professional International Draughts opening theory from `openings.json`, allowing for instant and theoretically sound early-game play.
+- **Integrated Opening Book:** Deep integration with professional International Draughts opening theory, allowing for instant and theoretically sound early-game play via an efficient Trie-based lookup system.
 - **Comprehensive Analysis Panel:** Real-time evaluation gauge, move history tracking, and search statistics (nodes, depth).
-- **Standards Support:** Full support for FEN (Forsyth-Edwards Notation) and PDN (Portable Draughts Notation) for importing and exporting game states and opening theory.
+- **Standards Support:** Full support for FEN (Forsyth-Edwards Notation) and PDN (Portable Draughts Notation) import/export, allowing users to save games and analyze standard notation files.
 - **GPU-Accelerated View:** A high-performance rendering system using CSS transforms for zero-reflow animations and 100% responsiveness.
 - **Ghanaian Board Orientation:** Support for a horizontally mirror-flipped board layout to align with Ghanaian competitive standards.
